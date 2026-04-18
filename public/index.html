@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>نظام الخرائط المحلي</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:Tahoma, Arial, sans-serif; display:flex; background:#f3f4f6; }
+    #map { flex:1; height:100vh; }
+    .side { width:380px; padding:15px; background:#f3f4f6; border-left:1px solid #ddd; overflow-y:auto; height:100vh; }
+    .card { background:#fff; border:1px solid #ddd; border-radius:14px; padding:14px; margin-bottom:12px; }
+    h2 { margin:0 0 10px; color:#16325c; }
+    input[type="file"], input[type="text"], input[type="password"] {
+      width:100%; padding:10px; margin-bottom:10px;
+      border:1px solid #ccc; border-radius:10px; font-size:16px;
+    }
+    button { width:100%; padding:12px; background:#2563eb; color:#fff; border:0; border-radius:10px; font-size:18px; cursor:pointer; margin-bottom:6px; }
+    button:hover { background:#1d4ed8; }
+    button.secondary { background:#6b7280; font-size:14px; padding:8px; }
+    button.secondary:hover { background:#4b5563; }
+    button.danger { background:#dc2626; font-size:13px; padding:5px 10px; width:auto; margin:0; }
+    button.danger:hover { background:#b91c1c; }
+    .status { margin-top:8px; font-size:15px; }
+    .result-item { background:#f9fafb; border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; cursor:pointer; }
+    .result-item:hover { background:#eef4ff; }
+    .file-item { background:#f9fafb; border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .file-item-info { flex:1; cursor:pointer; }
+    .file-item-info:hover { color:#2563eb; }
+    .muted { color:#666; font-size:13px; }
+    .count { color:#16325c; font-weight:bold; margin-bottom:8px; font-size:15px; }
+
+    /* اللوجن */
+    #loginOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:9999; display:flex; align-items:center; justify-content:center; }
+    #loginBox { background:#fff; border-radius:18px; padding:32px 28px; width:340px; text-align:center; box-shadow:0 8px 40px rgba(0,0,0,0.3); }
+    #loginBox h2 { color:#16325c; font-size:22px; margin-bottom:20px; }
+    #loginBox input { width:100%; padding:11px; margin-bottom:12px; border:1px solid #ccc; border-radius:10px; font-size:16px; }
+    #loginBox button { width:100%; padding:13px; background:#2563eb; color:#fff; border:0; border-radius:10px; font-size:18px; cursor:pointer; }
+    #loginBox button:hover { background:#1d4ed8; }
+    #loginError { color:#b91c1c; font-size:14px; margin-top:8px; min-height:20px; }
+
+    /* شريط المستخدم */
+    .user-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; background:#fff; border-radius:12px; padding:10px 14px; border:1px solid #ddd; }
+    .user-bar span { font-size:14px; color:#444; }
+    .role-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; font-weight:bold; }
+    .role-admin { background:#dbeafe; color:#1d4ed8; }
+    .role-viewer { background:#d1fae5; color:#065f46; }
+    .user-bar button { width:auto; padding:6px 14px; font-size:13px; margin:0; }
+
+    /* البحث */
+    .search-tabs { display:flex; gap:6px; margin-bottom:10px; }
+    .tab-btn { flex:1; padding:7px; font-size:13px; border:1px solid #ccc; border-radius:8px; background:#f9fafb; cursor:pointer; color:#333; }
+    .tab-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+    .geo-results { border:1px solid #ddd; border-radius:10px; background:#fff; max-height:200px; overflow-y:auto; margin-bottom:8px; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
+    .geo-item { padding:9px 12px; cursor:pointer; font-size:14px; border-bottom:1px solid #f0f0f0; }
+    .geo-item:last-child { border-bottom:none; }
+    .geo-item:hover { background:#eef4ff; }
+
+    /* مؤشر الموقع المتحرك */
+    .locating-pulse {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 0 rgba(37,99,235,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.6); }
+      70%  { box-shadow: 0 0 0 14px rgba(37,99,235,0); }
+      100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>🗺️ نظام الخرائط</h2>
+    <input type="text" id="loginUser" placeholder="اسم المستخدم" />
+    <input type="password" id="loginPass" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter') doLogin()" />
+    <button onclick="doLogin()">دخول</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div class="side">
+
+  <div class="user-bar" id="userBar" style="display:none;">
+    <span>👤 <b id="userNameLabel"></b> &nbsp;<span class="role-badge" id="roleBadge"></span></span>
+    <button class="secondary" onclick="logout()">خروج</button>
+  </div>
+
+  <div class="card" id="uploadCard" style="display:none;">
+    <h2>رفع KMZ</h2>
+    <input type="file" id="file" accept=".kmz">
+    <button onclick="upload()">رفع الملف</button>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div class="card">
+    <h2>البحث</h2>
+    <div class="search-tabs">
+      <button class="tab-btn active" id="tab-features" onclick="switchTab('features')">🔍 داخل الملفات</button>
+      <button class="tab-btn" id="tab-geo" onclick="switchTab('geo')">🌍 بحث جغرافي</button>
+    </div>
+
+    <div id="panel-features">
+      <input type="text" id="searchBox" placeholder="ابحث بأي اسم أو قيمة..." oninput="searchFeatures()" />
+      <div id="searchCount" class="count"></div>
+      <div id="results"><div class="muted">لا توجد نتائج حالياً</div></div>
+    </div>
+
+    <div id="panel-geo" style="display:none;">
+      <input type="text" id="geoSearchBox" placeholder="اكتب اسم المنطقة أو الحي..." oninput="geoSearchDebounced()" />
+      <div class="geo-results" id="geoResults"></div>
+      <div class="muted" id="geoStatus"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>الملفات المرفوعة</h2>
+    <div id="filesList">لا توجد ملفات بعد</div>
+  </div>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script>
+// ===== اللوجن =====
+let currentRole = null;
+let currentUser = '';
+
+async function doLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  document.getElementById('loginError').textContent = '';
+  if (!username || !password) { document.getElementById('loginError').textContent = 'أدخل اليوزر والباسورد'; return; }
+  try {
+    const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username,password}) });
+    const data = await res.json();
+    if (data.success) {
+      currentRole = data.role; currentUser = username;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('userBar').style.display = 'flex';
+      document.getElementById('userNameLabel').textContent = username;
+      const badge = document.getElementById('roleBadge');
+      if (currentRole === 'admin') {
+        badge.textContent = 'مدير'; badge.className = 'role-badge role-admin';
+        document.getElementById('uploadCard').style.display = 'block';
+      } else {
+        badge.textContent = 'مشاهد'; badge.className = 'role-badge role-viewer';
+      }
+      loadFiles();
+    } else {
+      document.getElementById('loginError').textContent = data.error || 'خطأ في تسجيل الدخول';
+    }
+  } catch(e) { document.getElementById('loginError').textContent = 'تعذر الاتصال بالسيرفر'; }
+}
+
+function logout() {
+  currentRole = null; currentUser = '';
+  document.getElementById('uploadCard').style.display = 'none';
+  document.getElementById('userBar').style.display = 'none';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginOverlay').style.display = 'flex';
+}
+
+// ===== الخريطة =====
+const map = L.map('map').setView([33.3, 44.3], 7);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(map);
+
+let currentMarkersLayer = null;
+let currentShapesLayer = null;
+let searchableFeatures = [];
+let searchMarker = null; // مؤشر البحث المتحرك
+
+// مؤشر متحرك (نبضة)
+const pulseIcon = L.divIcon({
+  className: '',
+  html: '<div class="locating-pulse"></div>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
+});
+
+function setSearchMarker(latlng, popupText) {
+  if (searchMarker) { map.removeLayer(searchMarker); searchMarker = null; }
+  searchMarker = L.marker(latlng, { icon: pulseIcon, zIndexOffset: 1000 })
+    .addTo(map)
+    .bindPopup(`<b>${popupText}</b>`)
+    .openPopup();
+}
+
+function setStatus(msg, type='') {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.style.color = type === 'error' ? '#b91c1c' : '#166534';
+}
+
+function featureToHtml(feature) {
+  const props = feature.properties || {};
+  let html = '<div style="max-width:260px">';
+  for (let k in props) { if (props[k] !== null && props[k] !== '') html += `<b>${k}</b>: ${props[k]}<br>`; }
+  return html + '</div>';
+}
+
+function clearMapLayers() {
+  if (currentMarkersLayer) { map.removeLayer(currentMarkersLayer); currentMarkersLayer = null; }
+  if (currentShapesLayer) { map.removeLayer(currentShapesLayer); currentShapesLayer = null; }
+}
+
+function buildSearchIndex(features, pointLayerRefs) {
+  searchableFeatures = features.map((feature, i) => {
+    const props = feature.properties || {};
+    const text = Object.values(props).filter(Boolean).join(' ').toLowerCase();
+    return { feature, marker: pointLayerRefs[i] || null, searchText: text };
+  });
+}
+
+function showGeoJSON(data) {
+  clearMapLayers();
+  const pointRefs = [];
+  const cluster = L.markerClusterGroup({ chunkedLoading:true, chunkDelay:50 });
+  const shapes = L.geoJSON(null, {
+    style:{weight:2},
+    onEachFeature:(f,l) => l.bindPopup(featureToHtml(f))
+  }).addTo(map);
+
+  const geo = L.geoJSON(data, {
+    pointToLayer:(feature,latlng) => {
+      const marker = L.marker(latlng);
+      marker.bindPopup(featureToHtml(feature));
+      pointRefs.push(marker);
+      cluster.addLayer(marker);
+      return marker;
+    },
+    onEachFeature:(feature,layer) => {
+      if (!(layer instanceof L.Marker)) {
+        layer.bindPopup(featureToHtml(feature));
+        shapes.addLayer(layer);
+      }
+    }
+  });
+
+  map.addLayer(cluster);
+  currentMarkersLayer = cluster;
+  currentShapesLayer = shapes;
+  buildSearchIndex(data.features || [], pointRefs);
+  try { map.fitBounds(geo.getBounds(), {padding:[20,20]}); } catch(e){}
+  renderResults([]);
+  document.getElementById('searchCount').textContent = '';
+}
+
+function zoomToFeature(item) {
+  const props = item.feature.properties || {};
+  const label = Object.values(props).find(v=>v) || 'نتيجة';
+  if (item.marker) {
+    const latlng = item.marker.getLatLng();
+    map.setView(latlng, 17);
+    setSearchMarker(latlng, label);
+  } else {
+    try {
+      const bounds = L.geoJSON(item.feature).getBounds();
+      map.fitBounds(bounds, {padding:[30,30]});
+      setSearchMarker(bounds.getCenter(), label);
+    } catch(e){}
+  }
+}
+
+function renderResults(items) {
+  const box = document.getElementById('results');
+  box.innerHTML = '';
+  if (!items.length) { box.innerHTML = '<div class="muted">لا توجد نتائج حالياً</div>'; return; }
+  items.forEach(item => {
+    const props = item.feature.properties || {};
+    const title = Object.values(props).find(v=>v) || 'نتيجة بدون اسم';
+    const div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML = `<div><b>${title}</b></div><div class="muted">${Object.entries(props).slice(0,3).map(([k,v])=>`${k}: ${v}`).join(' | ')}</div>`;
+    div.onclick = () => zoomToFeature(item);
+    box.appendChild(div);
+  });
+}
+
+function searchFeatures() {
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const countEl = document.getElementById('searchCount');
+  if (!q) { countEl.textContent=''; renderResults([]); return; }
+  const results = searchableFeatures.filter(item => item.searchText.includes(q)).slice(0,100);
+  countEl.textContent = `عدد النتائج: ${results.length}`;
+  renderResults(results);
+}
+
+// ===== البحث الجغرافي =====
+let geoDebounceTimer = null;
+function geoSearchDebounced() { clearTimeout(geoDebounceTimer); geoDebounceTimer = setTimeout(doGeoSearch, 500); }
+
+async function doGeoSearch() {
+  const q = document.getElementById('geoSearchBox').value.trim();
+  const resultsBox = document.getElementById('geoResults');
+  const status = document.getElementById('geoStatus');
+  if (q.length < 2) { resultsBox.style.display='none'; status.textContent=''; return; }
+  status.textContent = 'جاري البحث...';
+  resultsBox.style.display = 'none';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&accept-language=ar,en&countrycodes=iq`;
+    const res = await fetch(url, {headers:{'Accept-Language':'ar,en'}});
+    const data = await res.json();
+    status.textContent = '';
+    resultsBox.innerHTML = '';
+    if (!data.length) { status.textContent = 'لم يتم العثور على نتائج'; return; }
+    data.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'geo-item';
+      div.textContent = item.display_name;
+      div.onclick = () => {
+        const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
+        const label = item.display_name.split(',')[0];
+
+        if (item.boundingbox) {
+          const bb = item.boundingbox.map(parseFloat);
+          map.fitBounds([[bb[0],bb[2]],[bb[1],bb[3]]], {padding:[30,30]});
+        } else {
+          map.setView([lat,lon], 15);
+        }
+
+        // مؤشر متحرك على النتيجة
+        setSearchMarker([lat,lon], label);
+
+        resultsBox.style.display = 'none';
+        document.getElementById('geoSearchBox').value = label;
+        status.textContent = '';
+      };
+      resultsBox.appendChild(div);
+    });
+    resultsBox.style.display = 'block';
+  } catch(e) { status.textContent = 'تعذر البحث. تحقق من الاتصال.'; }
+}
+
+// ===== التبويبات =====
+function switchTab(tab) {
+  document.getElementById('tab-features').classList.toggle('active', tab==='features');
+  document.getElementById('tab-geo').classList.toggle('active', tab==='geo');
+  document.getElementById('panel-features').style.display = tab==='features' ? 'block' : 'none';
+  document.getElementById('panel-geo').style.display = tab==='geo' ? 'block' : 'none';
+}
+
+// ===== الرفع =====
+async function upload() {
+  const file = document.getElementById('file').files[0];
+  if (!file) return setStatus('اختر ملف','error');
+  const fd = new FormData();
+  fd.append('file', file);
+  setStatus('جاري الرفع...');
+  try {
+    const res = await fetch('/api/upload', {method:'POST', body:fd});
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'فشل الرفع');
+    const geo = await fetch('/api/data/'+json.file);
+    const data = await geo.json();
+    showGeoJSON(data);
+    setStatus('تم بنجاح ✅');
+    loadFiles();
+  } catch(e) { setStatus(e.message||'فشل الرفع','error'); }
+}
+
+// ===== حذف ملف =====
+async function deleteFile(savedFile, originalName, e) {
+  e.stopPropagation();
+  if (!confirm(`هل تريد حذف الملف؟\n${originalName}`)) return;
+  try {
+    const res = await fetch('/api/files/' + savedFile, {method:'DELETE'});
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'فشل الحذف');
+    loadFiles();
+  } catch(e) { alert('فشل الحذف: ' + e.message); }
+}
+
+// ===== قائمة الملفات =====
+async function loadFiles() {
+  try {
+    const res = await fetch('/api/files');
+    const files = await res.json();
+    const box = document.getElementById('filesList');
+    box.innerHTML = '';
+    if (!Array.isArray(files) || !files.length) { box.innerHTML='<div class="muted">لا توجد ملفات بعد</div>'; return; }
+    files.forEach(file => {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+
+      const info = document.createElement('div');
+      info.className = 'file-item-info';
+      info.innerHTML = `<div><b>${file.originalName || file.savedFile}</b></div><div class="muted">العناصر: ${file.featureCount||0}</div>`;
+      info.onclick = async () => {
+        try {
+          const geo = await fetch('/api/data/'+file.savedFile);
+          const data = await geo.json();
+          showGeoJSON(data);
+        } catch(e) {}
+      };
+      div.appendChild(info);
+
+      // زر الحذف للادمن فقط
+      if (currentRole === 'admin') {
+        const btn = document.createElement('button');
+        btn.className = 'danger';
+        btn.textContent = '🗑️';
+        btn.title = 'حذف الملف';
+        btn.onclick = (e) => deleteFile(file.savedFile, file.originalName || file.savedFile, e);
+        div.appendChild(btn);
+      }
+
+      box.appendChild(div);
+    });
+  } catch { document.getElementById('filesList').innerHTML='<div class="muted">تعذر تحميل القائمة</div>'; }
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#panel-geo')) document.getElementById('geoResults').style.display='none';
+});
+</script>
+</body>
+</html>
