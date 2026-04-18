@@ -7,7 +7,8 @@ const { DOMParser } = require('xmldom');
 const toGeoJSON = require('@mapbox/togeojson');
 
 const app = express();
-const PORT = 3000;
+const PORT = 9999;
+const HOST = '0.0.0.0';
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const DATA_DIR = path.join(__dirname, 'data');
@@ -120,4 +121,4 @@ app.post('/api/upload', upload.any(), (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message || 'Error processing file' }); }
 });
 
-app.listen(PORT, () => console.log(`Local KMZ map server is running on port ${PORT}`));
+app.listen(PORT, HOST, () => console.log(`Local KMZ map server is running on http://${HOST}:${PORT}`));
