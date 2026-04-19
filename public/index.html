@@ -53,10 +53,25 @@
     .search-tabs { display:flex; gap:6px; margin-bottom:10px; }
     .tab-btn { flex:1; padding:7px; font-size:13px; border:1px solid #ccc; border-radius:8px; background:#f9fafb; cursor:pointer; color:#333; }
     .tab-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
-    .geo-results { border:1px solid #ddd; border-radius:10px; background:#fff; max-height:200px; overflow-y:auto; margin-bottom:8px; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-    .geo-item { padding:9px 12px; cursor:pointer; font-size:14px; border-bottom:1px solid #f0f0f0; }
+    /* البحث الجغرافي المتطور */
+    .geo-search-wrap { position:relative; }
+    .geo-results { border:1px solid #d1d5db; border-radius:12px; background:#fff; max-height:260px; overflow-y:auto; margin-bottom:8px; display:none; box-shadow:0 6px 20px rgba(0,0,0,0.12); }
+    .geo-item { padding:10px 13px; cursor:pointer; font-size:14px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:8px; }
     .geo-item:last-child { border-bottom:none; }
-    .geo-item:hover { background:#eef4ff; }
+    .geo-item:hover { background:#eff6ff; }
+    .geo-item.highlighted { background:#eff6ff; }
+    .geo-item-icon { font-size:16px; flex-shrink:0; }
+    .geo-item-body { flex:1; min-width:0; }
+    .geo-item-name { font-weight:600; color:#1e3a5f; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .geo-item-sub { font-size:12px; color:#6b7280; margin-top:1px; }
+    .geo-item-tag { font-size:11px; padding:1px 7px; border-radius:20px; background:#dbeafe; color:#1d4ed8; font-weight:bold; flex-shrink:0; }
+    .geo-sep { padding:5px 12px; font-size:11px; color:#9ca3af; background:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb; }
+
+
+    .geo-coords-hint { font-size:11px; color:#6b7280; margin-bottom:8px; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:6px 10px; line-height:1.6; }
+    .geo-input-wrap { position:relative; margin-bottom:4px; }
+    .geo-input-wrap input { padding-left: 36px !important; }
+    .geo-input-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
 
     /* مؤشر الموقع المتحرك */
     .locating-pulse {
@@ -114,7 +129,23 @@
     </div>
 
     <div id="panel-geo" style="display:none;">
-      <input type="text" id="geoSearchBox" placeholder="ابحث في واسط والبصرة..." oninput="geoSearchDebounced()" />
+
+      <!-- خانة البحث -->
+      <div class="geo-input-wrap">
+        <span class="geo-input-icon">🔍</span>
+        <input type="text" id="geoSearchBox"
+          placeholder="اسم منطقة أو إحداثيات..."
+          oninput="geoSearchDebounced()"
+          onkeydown="geoKeyNav(event)"
+          autocomplete="off" />
+      </div>
+      <div class="geo-coords-hint">
+        💡 <b>يقبل عدة صيغ:</b><br>
+        • اسم حي: <code>الطشاش</code> أو <code>العشار</code><br>
+        • DD: <code>32.5003, 45.8289</code><br>
+        • DMS: <code>32°30'01"N 45°49'44"E</code><br>
+        • بدون رموز: <code>32 30 01 N 45 49 44 E</code>
+      </div>
       <div class="geo-results" id="geoResults"></div>
       <div class="muted" id="geoStatus"></div>
     </div>
@@ -298,97 +329,242 @@ function searchFeatures() {
   renderResults(results);
 }
 
-// ===== البحث الجغرافي =====
-// قاموس محلي للأحياء والمناطق في واسط والبصرة (يشتغل بدون انترنت)
+// ===== البحث الجغرافي المتطور =====
+
+// --- قاموس محلي ---
 const LOCAL_PLACES = [
-  // ===== واسط =====
-  {name:"الطشاش",          prov:"واسط - الكوت",    lat:32.5003, lon:45.8289},
-  {name:"الطشاش حي الصدرين", prov:"واسط - الكوت",  lat:32.5010, lon:45.8280},
-  {name:"الكوت",            prov:"واسط",            lat:32.5018, lon:45.8339},
-  {name:"حي النهضة",       prov:"واسط - الكوت",    lat:32.5065, lon:45.8201},
-  {name:"حي الأطباء",      prov:"واسط - الكوت",    lat:32.5080, lon:45.8150},
-  {name:"حي السلام",       prov:"واسط - الكوت",    lat:32.5090, lon:45.8250},
-  {name:"حي المعلمين",     prov:"واسط - الكوت",    lat:32.5100, lon:45.8300},
-  {name:"حي الجامعة",      prov:"واسط - الكوت",    lat:32.5120, lon:45.8180},
-  {name:"حي الأندلس",      prov:"واسط - الكوت",    lat:32.5050, lon:45.8350},
-  {name:"حي البلديات",     prov:"واسط - الكوت",    lat:32.5030, lon:45.8200},
-  {name:"حي الشرطة",       prov:"واسط - الكوت",    lat:32.5070, lon:45.8320},
-  {name:"حي الصدرين",      prov:"واسط - الكوت",    lat:32.5010, lon:45.8270},
-  {name:"العزيزية",         prov:"واسط",            lat:32.9036, lon:45.0673},
-  {name:"الصويرة",          prov:"واسط",            lat:33.0626, lon:44.9730},
-  {name:"النعمانية",        prov:"واسط",            lat:32.5373, lon:45.3236},
-  {name:"الحي",             prov:"واسط",            lat:32.4826, lon:46.0505},
-  {name:"بدرة",             prov:"واسط",            lat:33.1025, lon:45.9390},
-  {name:"جصان",             prov:"واسط",            lat:32.7736, lon:45.7059},
-  {name:"الزبيدية",         prov:"واسط",            lat:32.2958, lon:45.5444},
-  {name:"سيد صالح",         prov:"واسط",            lat:32.1605, lon:45.9053},
-  {name:"الكوت الجديدة",   prov:"واسط",            lat:32.5150, lon:45.8100},
-  {name:"ضاحية الكوت",     prov:"واسط",            lat:32.4950, lon:45.8400},
-  {name:"حي الرسالة",      prov:"واسط - الكوت",    lat:32.5200, lon:45.8250},
-  {name:"حي الكرامة",      prov:"واسط - الكوت",    lat:32.5180, lon:45.8310},
-  {name:"حي الحسين",       prov:"واسط - الكوت",    lat:32.5140, lon:45.8230},
-  {name:"حي الوحدة",       prov:"واسط - الكوت",    lat:32.5060, lon:45.8290},
-  {name:"المجد",            prov:"واسط - الكوت",    lat:32.5025, lon:45.8315},
-  {name:"الشيوخ",           prov:"واسط",            lat:32.0833, lon:46.1333},
-  {name:"وسط الكوت",       prov:"واسط",            lat:32.5000, lon:45.8350},
-  // ===== البصرة =====
-  {name:"العشار",           prov:"البصرة",          lat:30.5219, lon:47.8267},
-  {name:"المعقل",           prov:"البصرة",          lat:30.5530, lon:47.8190},
-  {name:"أبو الخصيب",       prov:"البصرة",          lat:30.4411, lon:47.9752},
-  {name:"الزبير",           prov:"البصرة",          lat:30.3905, lon:47.7072},
-  {name:"القرنة",           prov:"البصرة",          lat:31.0006, lon:47.4373},
-  {name:"حي الحسين",        prov:"البصرة",          lat:30.5150, lon:47.8200},
-  {name:"الأصمعي",          prov:"البصرة",          lat:30.5300, lon:47.8350},
-  {name:"حي الجمهورية",    prov:"البصرة",          lat:30.5180, lon:47.8150},
-  {name:"البصرة القديمة",  prov:"البصرة",          lat:30.5050, lon:47.8330},
-  {name:"حي الجزائر",      prov:"البصرة",          lat:30.5600, lon:47.8250},
-  {name:"خور الزبير",       prov:"البصرة",          lat:30.3536, lon:47.7203},
-  {name:"الفاو",            prov:"البصرة",          lat:29.9834, lon:48.4686},
-  {name:"الهارثة",          prov:"البصرة",          lat:30.6241, lon:47.8350},
-  {name:"مدينة الصدر",     prov:"البصرة",          lat:30.5350, lon:47.8200},
-  {name:"البصرة الجديدة",  prov:"البصرة",          lat:30.5700, lon:47.8000},
-  {name:"حي النضال",        prov:"البصرة",          lat:30.5250, lon:47.8400},
-  {name:"الميناء",          prov:"البصرة",          lat:30.5450, lon:47.8500},
-  {name:"أبو غرب",          prov:"البصرة",          lat:30.4800, lon:47.8600},
-  {name:"المدينة",          prov:"البصرة",          lat:30.5085, lon:47.8290},
-  {name:"التنومة",          prov:"البصرة",          lat:30.5800, lon:47.7900},
-  {name:"شط العرب",         prov:"البصرة",          lat:30.5000, lon:47.8500},
-  {name:"حي السعدي",        prov:"البصرة",          lat:30.5100, lon:47.8100},
-  {name:"حي الفاروق",       prov:"البصرة",          lat:30.5320, lon:47.8280},
+  {name:"الطشاش",             prov:"واسط",  city:"الكوت",   lat:32.5003, lon:45.8289},
+  {name:"الطشاش حي الصدرين", prov:"واسط",  city:"الكوت",   lat:32.5010, lon:45.8280},
+  {name:"حي الصدرين",         prov:"واسط",  city:"الكوت",   lat:32.5010, lon:45.8270},
+  {name:"الكوت",               prov:"واسط",  city:"الكوت",   lat:32.5018, lon:45.8339},
+  {name:"حي النهضة",          prov:"واسط",  city:"الكوت",   lat:32.5065, lon:45.8201},
+  {name:"حي الأطباء",         prov:"واسط",  city:"الكوت",   lat:32.5080, lon:45.8150},
+  {name:"حي السلام",          prov:"واسط",  city:"الكوت",   lat:32.5090, lon:45.8250},
+  {name:"حي المعلمين",        prov:"واسط",  city:"الكوت",   lat:32.5100, lon:45.8300},
+  {name:"حي الجامعة",         prov:"واسط",  city:"الكوت",   lat:32.5120, lon:45.8180},
+  {name:"حي الأندلس",         prov:"واسط",  city:"الكوت",   lat:32.5050, lon:45.8350},
+  {name:"حي البلديات",        prov:"واسط",  city:"الكوت",   lat:32.5030, lon:45.8200},
+  {name:"حي الشرطة",          prov:"واسط",  city:"الكوت",   lat:32.5070, lon:45.8320},
+  {name:"حي الرسالة",         prov:"واسط",  city:"الكوت",   lat:32.5200, lon:45.8250},
+  {name:"حي الكرامة",         prov:"واسط",  city:"الكوت",   lat:32.5180, lon:45.8310},
+  {name:"حي الحسين",          prov:"واسط",  city:"الكوت",   lat:32.5140, lon:45.8230},
+  {name:"حي الوحدة",          prov:"واسط",  city:"الكوت",   lat:32.5060, lon:45.8290},
+  {name:"المجد",               prov:"واسط",  city:"الكوت",   lat:32.5025, lon:45.8315},
+  {name:"وسط الكوت",          prov:"واسط",  city:"الكوت",   lat:32.5000, lon:45.8350},
+  {name:"الكوت الجديدة",      prov:"واسط",  city:"الكوت",   lat:32.5150, lon:45.8100},
+  {name:"ضاحية الكوت",        prov:"واسط",  city:"الكوت",   lat:32.4950, lon:45.8400},
+  {name:"العزيزية",            prov:"واسط",  city:"العزيزية",lat:32.9036, lon:45.0673},
+  {name:"الصويرة",             prov:"واسط",  city:"الصويرة", lat:33.0626, lon:44.9730},
+  {name:"النعمانية",           prov:"واسط",  city:"النعمانية",lat:32.5373,lon:45.3236},
+  {name:"الحي",                prov:"واسط",  city:"الحي",    lat:32.4826, lon:46.0505},
+  {name:"بدرة",                prov:"واسط",  city:"بدرة",    lat:33.1025, lon:45.9390},
+  {name:"جصان",                prov:"واسط",  city:"جصان",    lat:32.7736, lon:45.7059},
+  {name:"الزبيدية",            prov:"واسط",  city:"الزبيدية",lat:32.2958, lon:45.5444},
+  {name:"سيد صالح",            prov:"واسط",  city:"سيد صالح",lat:32.1605, lon:45.9053},
+  {name:"الشيوخ",              prov:"واسط",  city:"الشيوخ",  lat:32.0833, lon:46.1333},
+  {name:"العشار",              prov:"البصرة",city:"البصرة",  lat:30.5219, lon:47.8267},
+  {name:"المعقل",              prov:"البصرة",city:"البصرة",  lat:30.5530, lon:47.8190},
+  {name:"أبو الخصيب",          prov:"البصرة",city:"أبو الخصيب",lat:30.4411,lon:47.9752},
+  {name:"الزبير",              prov:"البصرة",city:"الزبير",  lat:30.3905, lon:47.7072},
+  {name:"القرنة",              prov:"البصرة",city:"القرنة",  lat:31.0006, lon:47.4373},
+  {name:"حي الحسين البصرة",   prov:"البصرة",city:"البصرة",  lat:30.5150, lon:47.8200},
+  {name:"الأصمعي",             prov:"البصرة",city:"البصرة",  lat:30.5300, lon:47.8350},
+  {name:"حي الجمهورية",        prov:"البصرة",city:"البصرة",  lat:30.5180, lon:47.8150},
+  {name:"البصرة القديمة",      prov:"البصرة",city:"البصرة",  lat:30.5050, lon:47.8330},
+  {name:"حي الجزائر",          prov:"البصرة",city:"البصرة",  lat:30.5600, lon:47.8250},
+  {name:"خور الزبير",          prov:"البصرة",city:"الزبير",  lat:30.3536, lon:47.7203},
+  {name:"الفاو",               prov:"البصرة",city:"الفاو",   lat:29.9834, lon:48.4686},
+  {name:"الهارثة",             prov:"البصرة",city:"الهارثة", lat:30.6241, lon:47.8350},
+  {name:"مدينة الصدر البصرة", prov:"البصرة",city:"البصرة",  lat:30.5350, lon:47.8200},
+  {name:"البصرة الجديدة",      prov:"البصرة",city:"البصرة",  lat:30.5700, lon:47.8000},
+  {name:"حي النضال",           prov:"البصرة",city:"البصرة",  lat:30.5250, lon:47.8400},
+  {name:"الميناء",             prov:"البصرة",city:"البصرة",  lat:30.5450, lon:47.8500},
+  {name:"أبو غرب",             prov:"البصرة",city:"البصرة",  lat:30.4800, lon:47.8600},
+  {name:"المدينة البصرة",      prov:"البصرة",city:"البصرة",  lat:30.5085, lon:47.8290},
+  {name:"التنومة",             prov:"البصرة",city:"البصرة",  lat:30.5800, lon:47.7900},
+  {name:"حي السعدي",           prov:"البصرة",city:"البصرة",  lat:30.5100, lon:47.8100},
+  {name:"حي الفاروق",          prov:"البصرة",city:"البصرة",  lat:30.5320, lon:47.8280},
 ];
 
+// --- الحالة ---
+let geoFilter = 'all';        // 'all' | 'wasit' | 'basra'
+
+let geoHighlight = -1;        // للتنقل بالكيبورد
+let geoDebounceTimer = null;
+let lastGeoItems = [];        // قائمة النتائج الحالية للكيبورد
+
+// --- فلترة المحافظة ---
+function setGeoFilter(f) {
+  geoFilter = f;
+  ['all','wasit','basra'].forEach(k => {
+    document.getElementById('gf-'+k).classList.toggle('active', k === f);
+  });
+  doGeoSearch();
+}
+
+// --- تاريخ البحث ---
+
+
+// --- تنقل بالكيبورد ---
+function geoKeyNav(e) {
+  const box = document.getElementById('geoResults');
+  const items = box.querySelectorAll('.geo-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    geoHighlight = Math.min(geoHighlight+1, items.length-1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    geoHighlight = Math.max(geoHighlight-1, 0);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (geoHighlight >= 0 && items[geoHighlight]) items[geoHighlight].click();
+    return;
+  } else if (e.key === 'Escape') {
+    box.style.display = 'none'; return;
+  } else { return; }
+  items.forEach((el,i) => el.classList.toggle('highlighted', i===geoHighlight));
+  if (items[geoHighlight]) items[geoHighlight].scrollIntoView({block:'nearest'});
+}
+
+// --- بحث محلي ---
 function searchLocal(q) {
-  const qn = q.trim().toLowerCase()
-    .replace(/^حي\s+/, '').replace(/^منطقة\s+/, '').replace(/^ناحية\s+/,'');
+  const qn = q.trim().toLowerCase().replace(/^(حي|منطقة|ناحية|مدينة)\s+/,'');
   return LOCAL_PLACES.filter(p => {
-    const pn = p.name.toLowerCase().replace(/^حي\s+/,'').replace(/^منطقة\s+/,'');
+    const pn = p.name.toLowerCase().replace(/^(حي|منطقة|مدينة)\s+/,'');
     return pn.includes(qn) || qn.includes(pn) || p.name.toLowerCase().includes(qn);
   });
 }
 
-let geoDebounceTimer = null;
-function geoSearchDebounced() { clearTimeout(geoDebounceTimer); geoDebounceTimer = setTimeout(doGeoSearch, 300); }
+// --- الدالة الرئيسية ---
+function geoSearchDebounced() {
+  clearTimeout(geoDebounceTimer);
+  geoHighlight = -1;
+  // نتائج فورية من القاموس بدون تأخير
+  const q = document.getElementById('geoSearchBox').value.trim();
+  if (q.length >= 2) showLocalResults(q);
+  // ثم Nominatim بعد 400ms
+  geoDebounceTimer = setTimeout(() => doGeoSearch(true), 400);
+}
 
-async function doGeoSearch() {
+// ===== محلل الإحداثيات - يدعم كل الصيغ =====
+function parseCoords(q) {
+  const s = q.trim().replace(/‏|‎/g, ''); // إزالة RLM/LRM
+
+  // 1. DD عادي: 32.5003, 45.8289 أو 32.5003 45.8289
+  let m = s.replace(/[()]/g,'').match(/^(-?\d+\.?\d*)\s*[,،;\s]\s*(-?\d+\.?\d*)$/);
+  if (m) {
+    const a = parseFloat(m[1]), b = parseFloat(m[2]);
+    if (a >= -90 && a <= 90 && b >= -180 && b <= 180) return {lat:a, lon:b};
+  }
+
+  // 2. DMS كامل مع رموز: 32°30'01"N 45°49'44"E أو N32°30'01" E45°49'44"
+  const dmsRe = /(\d+)[°d]\s*(\d+)['′m]\s*([\d.]+)["″s]?\s*([NSns])[,\s]*(\d+)[°d]\s*(\d+)['′m]\s*([\d.]+)["″s]?\s*([EWew])/i;
+  m = s.match(dmsRe);
+  if (m) {
+    let lat = parseFloat(m[1]) + parseFloat(m[2])/60 + parseFloat(m[3])/3600;
+    let lon = parseFloat(m[5]) + parseFloat(m[6])/60 + parseFloat(m[7])/3600;
+    if (/[Ss]/i.test(m[4])) lat = -lat;
+    if (/[Ww]/i.test(m[8])) lon = -lon;
+    return {lat, lon};
+  }
+
+  // 3. DMS بدون رموز: 32 30 01 N 45 49 44 E
+  const dmsPlain = /(\d+)\s+(\d+)\s+([\d.]+)\s*([NSns])\s+(\d+)\s+(\d+)\s*([\d.]+)\s*([EWew])/i;
+  m = s.match(dmsPlain);
+  if (m) {
+    let lat = parseFloat(m[1]) + parseFloat(m[2])/60 + parseFloat(m[3])/3600;
+    let lon = parseFloat(m[5]) + parseFloat(m[6])/60 + parseFloat(m[7])/3600;
+    if (/[Ss]/i.test(m[4])) lat = -lat;
+    if (/[Ww]/i.test(m[8])) lon = -lon;
+    return {lat, lon};
+  }
+
+  // 4. DDM: 32°30.016'N 45°49.733'E
+  const ddmRe = /(\d+)[°d]\s*([\d.]+)['′m]\s*([NSns])[,\s]*(\d+)[°d]\s*([\d.]+)['′m]\s*([EWew])/i;
+  m = s.match(ddmRe);
+  if (m) {
+    let lat = parseFloat(m[1]) + parseFloat(m[2])/60;
+    let lon = parseFloat(m[4]) + parseFloat(m[5])/60;
+    if (/[Ss]/i.test(m[3])) lat = -lat;
+    if (/[Ww]/i.test(m[6])) lon = -lon;
+    return {lat, lon};
+  }
+
+  // 5. صيغة Google Maps النسخ: 32.5003°N 45.8289°E
+  const googleRe = /(-?[\d.]+)[°]?\s*([NSns])[,\s]+(-?[\d.]+)[°]?\s*([EWew])/i;
+  m = s.match(googleRe);
+  if (m) {
+    let lat = parseFloat(m[1]);
+    let lon = parseFloat(m[3]);
+    if (/[Ss]/i.test(m[2])) lat = -lat;
+    if (/[Ww]/i.test(m[4])) lon = -lon;
+    return {lat, lon};
+  }
+
+  return null;
+}
+
+function formatDMS(lat, lon) {
+  function toDMS(val, pos, neg) {
+    const d = Math.abs(val);
+    const deg = Math.floor(d);
+    const minF = (d - deg) * 60;
+    const min = Math.floor(minF);
+    const sec = ((minF - min) * 60).toFixed(1);
+    return `${deg}°${min}'${sec}"${val >= 0 ? pos : neg}`;
+  }
+  return `${toDMS(lat,'N','S')} ${toDMS(lon,'E','W')}`;
+}
+
+function showLocalResults(q) {
+  const resultsBox = document.getElementById('geoResults');
+
+  // كشف إحداثيات أولاً
+  const coords = parseCoords(q);
+  if (coords) {
+    renderResults([{
+      type:'coord',
+      name: `${coords.lat.toFixed(6)}, ${coords.lon.toFixed(6)}`,
+      sub: formatDMS(coords.lat, coords.lon),
+      lat: coords.lat, lon: coords.lon
+    }]);
+    return;
+  }
+
+  const local = searchLocal(q);
+  if (local.length) {
+    renderResults(local.map(p => ({type:'local', name:p.name, sub:p.city+' — '+p.prov, lat:p.lat, lon:p.lon, prov:p.prov})));
+  }
+}
+
+async function doGeoSearch(skipLocal=false) {
   const q = document.getElementById('geoSearchBox').value.trim();
   const resultsBox = document.getElementById('geoResults');
   const status = document.getElementById('geoStatus');
   if (q.length < 2) { resultsBox.style.display='none'; status.textContent=''; return; }
 
-  resultsBox.innerHTML = '';
-  status.textContent = '';
+  // كشف إحداثيات (يدعم DD, DMS, DDM, Google Maps)
+  const coords = parseCoords(q);
+  if (coords) {
+    const {lat, lon} = coords;
+    map.setView([lat, lon], 16);
+    setSearchMarker([lat, lon], `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+    const label = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+    document.getElementById('geoSearchBox').value = label;
+    status.textContent = `📍 ${formatDMS(lat, lon)}`;
+    resultsBox.style.display = 'none';
+    return;
+  }
 
-  // 1) نبحث أولاً بالقاموس المحلي (فوري)
   const localResults = searchLocal(q);
 
-  // 2) نبحث بـ Nominatim بدون تقييد (لالتقاط أي شيء ما موجود بالقاموس)
+  // Nominatim
   let nominatimResults = [];
   try {
-    status.textContent = 'جاري البحث...';
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q + ' العراق')}&format=json&limit=10&accept-language=ar,en&countrycodes=iq`;
-    const res = await fetch(url, { headers: {'Accept-Language':'ar,en'} });
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q+' العراق')}&format=json&limit=10&accept-language=ar,en&countrycodes=iq`;
+    const res = await fetch(url, {headers:{'Accept-Language':'ar,en'}});
     const data = await res.json();
-    // فلتر: فقط نتائج داخل حدود واسط + البصرة (lat 29-34, lon 44-49)
     nominatimResults = data.filter(item => {
       const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
       return lat >= 29 && lat <= 34 && lon >= 44 && lon <= 49;
@@ -397,61 +573,72 @@ async function doGeoSearch() {
 
   status.textContent = '';
 
-  // عرض النتائج: محلية أولاً ثم Nominatim
   if (!localResults.length && !nominatimResults.length) {
-    status.textContent = 'لم يتم العثور على نتائج في واسط أو البصرة';
+    status.textContent = '⚠️ لم يتم العثور على نتائج';
+    resultsBox.style.display = 'none';
     return;
   }
 
-  // --- نتائج القاموس المحلي ---
-  localResults.forEach(place => {
+  const combined = [
+    ...localResults.map(p => ({type:'local', name:p.name, sub:p.city+' — '+p.prov, lat:p.lat, lon:p.lon, prov:p.prov})),
+    ...nominatimResults.map(item => {
+      const parts = item.display_name.split(',').map(s=>s.trim());
+      return {type:'nominatim', name:parts[0], sub:parts[1]||'', lat:parseFloat(item.lat), lon:parseFloat(item.lon), bbox:item.boundingbox};
+    })
+  ];
+  renderResults(combined);
+}
+
+function renderResults(items) {
+  lastGeoItems = items;
+  geoHighlight = -1;
+  const resultsBox = document.getElementById('geoResults');
+  resultsBox.innerHTML = '';
+  if (!items.length) { resultsBox.style.display='none'; return; }
+
+  let prevType = null;
+  items.forEach((item, idx) => {
+    // فاصل بين المحلي والنومينيتم
+    if (prevType === 'local' && item.type === 'nominatim') {
+      const sep = document.createElement('div');
+      sep.className = 'geo-sep';
+      sep.textContent = '── نتائج إضافية ──';
+      resultsBox.appendChild(sep);
+    }
+    prevType = item.type;
+
     const div = document.createElement('div');
     div.className = 'geo-item';
-    div.innerHTML = `📍 <b>${place.name}</b> <span style="color:#888;font-size:12px;">— ${place.prov}</span>`;
-    div.onclick = () => {
-      map.setView([place.lat, place.lon], 15);
-      setSearchMarker([place.lat, place.lon], place.name);
-      resultsBox.style.display = 'none';
-      document.getElementById('geoSearchBox').value = place.name;
-    };
-    resultsBox.appendChild(div);
-  });
 
-  // فاصل إذا عندنا نتائج من النوعين
-  if (localResults.length && nominatimResults.length) {
-    const sep = document.createElement('div');
-    sep.style.cssText = 'padding:4px 10px;font-size:11px;color:#999;background:#f5f5f5;border-top:1px solid #eee;';
-    sep.textContent = '── نتائج إضافية ──';
-    resultsBox.appendChild(sep);
-  }
+    const icon = item.type === 'coord' ? '🎯' : item.type === 'local' ? '📍' : '🔍';
+    const tag  = item.type === 'local' ? `<span class="geo-item-tag">${item.prov||''}</span>` : '';
 
-  // --- نتائج Nominatim ---
-  nominatimResults.forEach(item => {
-    const parts = item.display_name.split(',').map(s=>s.trim());
-    const mainName = parts[0];
-    const ref = parts[1] || '';
-    const div = document.createElement('div');
-    div.className = 'geo-item';
-    div.innerHTML = `🔍 <b>${mainName}</b> <span style="color:#888;font-size:12px;">${ref ? '— '+ref : ''}</span>`;
-    div.title = item.display_name;
+    div.innerHTML = `
+      <span class="geo-item-icon">${icon}</span>
+      <div class="geo-item-body">
+        <div class="geo-item-name">${item.name}</div>
+        ${item.sub ? `<div class="geo-item-sub">${item.sub}</div>` : ''}
+      </div>
+      ${tag}`;
+
     div.onclick = () => {
-      const lat = parseFloat(item.lat), lon = parseFloat(item.lon);
-      if (item.boundingbox) {
-        const bb = item.boundingbox.map(parseFloat);
+      if (item.bbox && item.type === 'nominatim') {
+        const bb = item.bbox.map(parseFloat);
         map.fitBounds([[bb[0],bb[2]],[bb[1],bb[3]]], {padding:[30,30]});
       } else {
-        map.setView([lat, lon], 15);
+        map.setView([item.lat, item.lon], 15);
       }
-      setSearchMarker([lat, lon], mainName);
-      resultsBox.style.display = 'none';
-      document.getElementById('geoSearchBox').value = mainName;
-      status.textContent = '';
+      setSearchMarker([item.lat, item.lon], item.name);
+      document.getElementById('geoSearchBox').value = item.name;
+      document.getElementById('geoResults').style.display = 'none';
+      document.getElementById('geoStatus').textContent = '';
     };
     resultsBox.appendChild(div);
   });
-
   resultsBox.style.display = 'block';
 }
+
+
 
 // ===== التبويبات =====
 function switchTab(tab) {
