@@ -59,4 +59,3 @@ sudo systemctl status local-kmz-map
 - النظام يقبل KMZ فقط.
 - بعض ملفات KMZ التي تحتوي Network Links أو GroundOverlay قد لا تعمل بالكامل.
 - هذه النسخة تستخدم OpenStreetMap كخلفية، وإذا تريدها أوفلاين نضيف Tile Server محلي بالمرحلة الثانية.
-# Local-kmz-FiberX-
