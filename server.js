@@ -7,7 +7,7 @@ const { DOMParser } = require('xmldom');
 const toGeoJSON = require('@mapbox/togeojson');
 
 const app  = express();
-const PORT = 3000;
+const PORT = 9999;
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const DATA_DIR   = path.join(__dirname, 'data');
@@ -166,27 +166,58 @@ const GOOGLE_API_KEY = 'AIzaSyAoNwpsCL397qH_VQljP6-3pqeARafyiWM';
 const https = require('https');
 
 app.get('/api/google-places', (req, res) => {
-  const query  = req.query.q || '';
-  const lat    = req.query.lat || '31.0';
-  const lon    = req.query.lon || '47.0';
-  const type   = req.query.type || '';
+  const query = req.query.q || '';
+  const lat   = req.query.lat || '31.0';
+  const lon   = req.query.lon || '47.0';
   
-  if (!query && !type) return res.json({ results: [] });
+  if (!query) return res.json({ results: [] });
   
-  let url;
-  if (query) {
-    // Text Search - أدق للبحث بالاسم
-    url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&location=${lat},${lon}&radius=50000&language=ar&key=${GOOGLE_API_KEY}`;
-  } else {
-    url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lon}&radius=10000&type=${type}&language=ar&key=${GOOGLE_API_KEY}`;
-  }
+  // نبحث بـ Text Search مع تقييد المنطقة (البصرة + واسط)
+  // نضيف "العراق" للبحث إذا مو موجودة
+  const searchQuery = query;
   
-  https.get(url, (apiRes) => {
+  // البحث الأول: Text Search مع location bias
+  const url1 = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${lat},${lon}&radius=200000&language=ar&key=${GOOGLE_API_KEY}`;
+  
+  https.get(url1, (apiRes) => {
     let data = '';
     apiRes.on('data', chunk => data += chunk);
     apiRes.on('end', () => {
-      try { res.json(JSON.parse(data)); }
-      catch(e) { res.status(500).json({ error: 'Parse error' }); }
+      try {
+        const result = JSON.parse(data);
+        
+        // فلتر: نقبل فقط نتائج داخل العراق
+        const iraqBounds = { minLat: 29.0, maxLat: 37.5, minLon: 38.0, maxLon: 49.0 };
+        const filtered = (result.results || []).filter(place => {
+          const loc = place.geometry && place.geometry.location;
+          if (!loc) return false;
+          return loc.lat >= iraqBounds.minLat && loc.lat <= iraqBounds.maxLat &&
+                 loc.lng >= iraqBounds.minLon && loc.lng <= iraqBounds.maxLon;
+        });
+        
+        // إذا ما في نتائج في العراق، نبحث مرة ثانية مع "العراق"
+        if (filtered.length === 0 && !searchQuery.includes('العراق') && !searchQuery.includes('Iraq')) {
+          const url2 = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery + ' العراق')}&language=ar&key=${GOOGLE_API_KEY}`;
+          https.get(url2, (r2) => {
+            let d2 = '';
+            r2.on('data', c => d2 += c);
+            r2.on('end', () => {
+              try {
+                const result2 = JSON.parse(d2);
+                const filtered2 = (result2.results || []).filter(place => {
+                  const loc = place.geometry && place.geometry.location;
+                  if (!loc) return false;
+                  return loc.lat >= iraqBounds.minLat && loc.lat <= iraqBounds.maxLat &&
+                         loc.lng >= iraqBounds.minLon && loc.lng <= iraqBounds.maxLon;
+                });
+                res.json({ results: filtered2 });
+              } catch(e) { res.json({ results: [] }); }
+            });
+          }).on('error', () => res.json({ results: [] }));
+        } else {
+          res.json({ results: filtered });
+        }
+      } catch(e) { res.status(500).json({ error: 'Parse error' }); }
     });
   }).on('error', (e) => res.status(500).json({ error: e.message }));
 });

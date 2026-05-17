@@ -495,67 +495,70 @@ function searchFeat(){
   });
 }
 
-// ===== البحث الجغرافي - Google Places + OSM Local =====
+// ===== البحث الجغرافي - Google Places Direct =====
 let geoTimer = null;
 let lastMarker = null;
+let currentRequest = null;
 
-function geoDelay() { clearTimeout(geoTimer); geoTimer = setTimeout(doGeoSearch, 300); }
+function geoDelay() {
+  clearTimeout(geoTimer);
+  geoTimer = setTimeout(doGeoSearch, 250);
+}
 
 const typeAr = {
   restaurant:'🍽️ مطعم', cafe:'☕ كافيه', fast_food:'🍔 وجبات',
-  food:'🍽️ مطعم', meal_takeaway:'🍔 وجبات',
+  food:'🍽️ مطعم', meal_takeaway:'🍔 وجبات', bakery:'🥖 مخبز',
   hospital:'🏥 مستشفى', pharmacy:'💊 صيدلية', doctor:'🏥 عيادة',
-  clinic:'🏥 عيادة', health:'🏥 صحة',
+  clinic:'🏥 عيادة', health:'🏥 صحة', dentist:'🦷 أسنان',
   school:'🏫 مدرسة', university:'🎓 جامعة', primary_school:'🏫 مدرسة',
-  secondary_school:'🏫 مدرسة', library:'📚 مكتبة',
-  mosque:'🕌 مسجد', place_of_worship:'🕌 مسجد',
-  bank:'🏦 بنك', atm:'🏧 ATM', finance:'🏦 بنك',
-  gas_station:'⛽ وقود', fuel:'⛽ وقود',
-  supermarket:'🛒 سوبرماركت', grocery_or_supermarket:'🛒 سوبرماركت',
-  shopping_mall:'🛍️ مول', store:'🛍️ محل',
-  police:'👮 شرطة', fire_station:'🚒 إطفاء',
+  secondary_school:'🏫 مدرسة', library:'📚 مكتبة', kindergarten:'🏫 روضة',
+  mosque:'🕌 مسجد', place_of_worship:'🕌 مسجد', church:'⛪ كنيسة',
+  bank:'🏦 بنك', atm:'🏧 ATM',
+  gas_station:'⛽ وقود', car_repair:'🔧 ورشة',
+  supermarket:'🛒 سوبرماركت', grocery_or_supermarket:'🛒 بقالة',
+  shopping_mall:'🛍️ مول', store:'🛍️ محل', clothing_store:'👗 ملابس',
+  police:'👮 شرطة', fire_station:'🚒 إطفاء', post_office:'📮 بريد',
   city:'🏙️ مدينة', town:'🏙️ مدينة', suburb:'🏘️ حي',
   neighbourhood:'🏘️ حي', quarter:'🏘️ منطقة',
-  village:'🏡 قرية', locality:'📍 منطقة',
-  hotel:'🏨 فندق', lodging:'🏨 فندق',
-  park:'🌳 حديقة', stadium:'🏟️ ملعب',
+  village:'🏡 قرية', locality:'📍 منطقة', sublocality:'🏘️ حي',
+  hotel:'🏨 فندق', lodging:'🏨 فندق', guest_house:'🏠 استراحة',
+  park:'🌳 حديقة', stadium:'🏟️ ملعب', gym:'💪 نادي',
   government:'🏛️ حكومي', local_government_office:'🏛️ حكومي',
+  bus_station:'🚌 محطة', transit_station:'🚌 محطة',
+  airport:'✈️ مطار', mosque_sunni:'🕌 مسجد',
   establishment:'📍 موقع', point_of_interest:'📍 موقع',
+  apartment_complex:'🏢 مجمع سكني', real_estate_agency:'🏠 عقارات',
+  general_contractor:'🏗️ مقاول',
 };
 
-function getIcon(types) {
-  if (!types) return '📍';
+function getTypeInfo(types) {
+  if (!types) return { icon:'📍', label:'موقع' };
   const arr = Array.isArray(types) ? types : [types];
   for (const t of arr) {
-    if (typeAr[t]) return typeAr[t].split(' ')[0];
+    if (typeAr[t]) {
+      const parts = typeAr[t].split(' ');
+      return { icon: parts[0], label: parts.slice(1).join(' ') };
+    }
   }
-  return '📍';
+  return { icon:'📍', label:'موقع' };
 }
 
-function getLabel(types) {
-  if (!types) return 'موقع';
-  const arr = Array.isArray(types) ? types : [types];
-  for (const t of arr) {
-    if (typeAr[t]) return typeAr[t].split(' ').slice(1).join(' ');
-  }
-  return 'موقع';
-}
-
-function zoomToPlace(lat, lon, name, label) {
+function zoomToPlace(lat, lon, name, label, address) {
   if (lastMarker) map.removeLayer(lastMarker);
   map.setView([lat, lon], 17);
-  lastMarker = L.marker([lat, lon]).addTo(map)
-    .bindPopup(`<b>${name}</b><br><small>${label}</small>`).openPopup();
-  setTimeout(() => { if(lastMarker) map.removeLayer(lastMarker); lastMarker=null; }, 15000);
+  const popup = `<b>${name}</b><br><small>${label}</small>${address?'<br><small style="color:#888">'+address+'</small>':''}
+    <br><small style="color:#aaa;font-size:10px">📍 ${lat.toFixed(6)}, ${lon.toFixed(6)}</small>`;
+  lastMarker = L.marker([lat, lon]).addTo(map).bindPopup(popup).openPopup();
+  setTimeout(() => { if(lastMarker){map.removeLayer(lastMarker);lastMarker=null;} }, 20000);
 }
 
 async function doGeoSearch() {
   const q = document.getElementById('geoBox').value.trim();
   const box = document.getElementById('geoRes');
   const st  = document.getElementById('geoSt');
-  
+
   if (!q) { box.style.display='none'; st.textContent=''; return; }
-  box.innerHTML = '';
+  box.innerHTML='';
 
   // إحداثيات مباشرة
   const cm = q.match(/(-?\d+[.,]\d*)\s*[,،\s]+\s*(-?\d+[.,]\d*)/);
@@ -564,7 +567,8 @@ async function doGeoSearch() {
     if (lat>=29&&lat<=38&&lon>=38&&lon<=49) {
       map.setView([lat,lon],17);
       if(lastMarker) map.removeLayer(lastMarker);
-      lastMarker = L.marker([lat,lon]).addTo(map).bindPopup(`📍 ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
+      lastMarker = L.marker([lat,lon]).addTo(map)
+        .bindPopup(`📍 <b>${lat.toFixed(6)}, ${lon.toFixed(6)}</b>`).openPopup();
       box.style.display='none'; st.textContent=''; return;
     }
   }
@@ -574,85 +578,22 @@ async function doGeoSearch() {
 
   // ====== 1. بحث محلي فوري ======
   const ql = q.toLowerCase().trim();
-  const tOrd = {city:0,town:1,suburb:2,neighbourhood:3,quarter:4,hospital:5,university:5,school:6,mosque:6,pharmacy:6,bank:6,hamlet:7,village:8,locality:9};
+  const tOrd = {city:0,town:1,suburb:2,neighbourhood:3,quarter:4,
+    hospital:5,university:5,school:6,mosque:6,pharmacy:6,bank:6,
+    hamlet:7,village:8,locality:9};
   const localHits = PLACES
     .filter(p => p.sk && p.sk.includes(ql))
     .sort((a,b) => {
       const aE=a.sk===ql?-1:a.sk.startsWith(ql)?0:1;
       const bE=b.sk===ql?-1:b.sk.startsWith(ql)?0:1;
       return (aE-bE)||((tOrd[a.type]??10)-(tOrd[b.type]??10));
-    }).slice(0, 5);
+    }).slice(0, 4);
 
-  renderLocalHits(localHits, box);
-
-  // ====== 2. Google Places API (الرئيسي) ======
-  try {
-    const center = map.getCenter();
-    const res = await fetch(`/api/google-places?q=${encodeURIComponent(q)}&lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}`);
-    const data = await res.json();
-    
-    const results = (data.results || []).filter(r => r.name && r.geometry);
-    
-    if (results.length > 0) {
-      if (localHits.length > 0) {
-        const sep = document.createElement('div');
-        sep.style.cssText = 'padding:3px 12px;font-size:10px;color:#bbb;background:#fafafa;border-top:1px solid #eee;';
-        sep.textContent = '── نتائج Google Maps ──';
-        box.appendChild(sep);
-      }
-      
-      const googleSeen = new Set(localHits.map(p => p.name));
-      
-      results.slice(0, 8).forEach(place => {
-        if (googleSeen.has(place.name)) return;
-        googleSeen.add(place.name);
-        
-        const div = document.createElement('div');
-        div.className = 'geo-item';
-        const loc = place.geometry.location;
-        const types = place.types || [];
-        const icon = getIcon(types);
-        const label = getLabel(types);
-        const addr = (place.formatted_address || '').split('،').slice(0,2).join('،');
-        const rating = place.rating ? `⭐ ${place.rating}` : '';
-        
-        div.innerHTML = `
-          <div style="display:flex;align-items:flex-start;gap:10px">
-            <span style="font-size:20px;min-width:24px;margin-top:1px">${icon}</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:14px">${place.name}</div>
-              <div style="font-size:11px;color:#888;margin-top:2px">${label}${addr?' · '+addr:''} ${rating}</div>
-            </div>
-          </div>`;
-        
-        div.onclick = () => {
-          zoomToPlace(loc.lat, loc.lng, place.name, label + (addr?' · '+addr:''));
-          box.style.display = 'none';
-          document.getElementById('geoBox').value = place.name;
-          st.textContent = '';
-        };
-        box.appendChild(div);
-      });
-    }
-    
-    const total = localHits.length + (results.length > 0 ? 1 : 0);
-    if (total > 0) { box.style.display='block'; st.textContent=''; }
-    else st.textContent = '❌ لم يتم العثور على نتائج';
-    
-  } catch(e) {
-    if (localHits.length > 0) { box.style.display='block'; st.textContent=''; }
-    else st.textContent = '⚠️ تعذر البحث';
-  }
-}
-
-function renderLocalHits(hits, box) {
-  hits.forEach(p => {
+  localHits.forEach(p => {
+    const { icon, label } = getTypeInfo([p.type]);
+    const gc = p.gov==='البصرة'?'#f97316':'#22d3ee';
     const div = document.createElement('div');
     div.className = 'geo-item';
-    const tl = typeAr[p.type] || '📍 موقع';
-    const icon = tl.split(' ')[0];
-    const label = tl.split(' ').slice(1).join(' ');
-    const gc = p.gov==='البصرة' ? '#f97316' : '#22d3ee';
     div.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:20px;min-width:24px">${icon}</span>
@@ -661,19 +602,83 @@ function renderLocalHits(hits, box) {
           <div style="font-size:11px;color:#888;margin-top:1px">
             <span style="background:${gc};color:#fff;padding:1px 8px;border-radius:8px;margin-left:4px">${p.gov}</span>
             ${label}${p.name_en?' · '+p.name_en:''}
+            <span style="color:#bbb;margin-right:4px">· ${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</span>
           </div>
         </div>
       </div>`;
     div.onclick = () => {
-      const z = ['city','town'].includes(p.type)?13:['suburb','neighbourhood','quarter'].includes(p.type)?15:16;
-      zoomToPlace(p.lat, p.lon, p.name, label+' · '+p.gov);
-      box.style.display = 'none';
+      zoomToPlace(p.lat, p.lon, p.name, label+' · '+p.gov, '');
+      box.style.display='none';
       document.getElementById('geoBox').value = p.name;
-      document.getElementById('geoSt').textContent = '';
+      st.textContent='';
     };
     box.appendChild(div);
   });
-  if (hits.length > 0) box.style.display = 'block';
+
+  if (localHits.length > 0) box.style.display = 'block';
+
+  // ====== 2. Google Places API ======
+  try {
+    const center = map.getCenter();
+    const res = await fetch(`/api/google-places?q=${encodeURIComponent(q)}&lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}`);
+    const data = await res.json();
+    const results = (data.results || []);
+    
+    const localNames = new Set(localHits.map(p=>p.name));
+    const googleResults = results.filter(r => r.name && r.geometry && !localNames.has(r.name));
+    
+    if (googleResults.length > 0) {
+      if (localHits.length > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'padding:3px 12px;font-size:10px;color:#bbb;background:#f5f5f5;border-top:1px solid #eee;text-align:center;';
+        sep.textContent = '── Google Maps ──';
+        box.appendChild(sep);
+      }
+
+      googleResults.slice(0, 8).forEach(place => {
+        const loc = place.geometry.location;
+        const { icon, label } = getTypeInfo(place.types || []);
+        // العنوان مختصر
+        const addr = (place.formatted_address || '')
+          .replace(/, Iraq$/, '').replace(/، العراق$/, '')
+          .split('،').slice(0,2).join('،').trim();
+        const rating = place.rating ? `⭐${place.rating}` : '';
+
+        const div = document.createElement('div');
+        div.className = 'geo-item';
+        div.innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:20px;min-width:24px;margin-top:2px">${icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:14px">${place.name}</div>
+              <div style="font-size:11px;color:#888;margin-top:2px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+                <span style="background:#4285f4;color:#fff;padding:1px 7px;border-radius:8px">Google</span>
+                <span>${label}</span>
+                ${addr?`<span style="color:#aaa">· ${addr}</span>`:''}
+                ${rating?`<span>${rating}</span>`:''}
+                <span style="color:#ccc;font-size:10px">${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}</span>
+              </div>
+            </div>
+          </div>`;
+        
+        div.onclick = () => {
+          zoomToPlace(loc.lat, loc.lng, place.name, label, addr);
+          box.style.display='none';
+          document.getElementById('geoBox').value = place.name;
+          st.textContent='';
+        };
+        box.appendChild(div);
+      });
+      box.style.display = 'block';
+    }
+
+    const total = localHits.length + googleResults.length;
+    st.textContent = total > 0 ? '' : '❌ لم يتم العثور على نتائج';
+
+  } catch(e) {
+    if (!localHits.length) st.textContent = '⚠️ تعذر البحث، تحقق من الاتصال';
+    else st.textContent = '';
+  }
 }
 
 // ===== التبويبات =====
