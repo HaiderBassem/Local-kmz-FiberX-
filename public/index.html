@@ -1,163 +1,100 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <title>نظام الخرائط المحلي</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-  <style>
-    * { box-sizing: border-box; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:Tahoma, Arial, sans-serif; display:flex; flex-direction:row; background:#f3f4f6; height:100vh; width:100vw; overflow:hidden; }
-    #map { position:absolute !important; top:0; left:0; right:320px; bottom:0; height:100vh !important; z-index:1; }
-    .side { position:absolute; top:0; right:0; width:320px; height:100vh; padding:10px; background:#f3f4f6; border-left:1px solid #ddd; overflow-y:auto; z-index:100; }
-    .card { background:#fff; border:1px solid #ddd; border-radius:12px; padding:12px; margin-bottom:10px; }
-    h2 { margin:0 0 10px; color:#16325c; font-size:16px; }
-    input[type="file"], input[type="text"], input[type="password"] {
-      width:100%; padding:9px 12px; margin-bottom:8px;
-      border:1px solid #ccc; border-radius:10px; font-size:15px; outline:none;
-    }
-    input:focus { border-color:#2563eb; }
-    button { width:100%; padding:11px; background:#2563eb; color:#fff; border:0; border-radius:10px; font-size:16px; cursor:pointer; margin-bottom:6px; }
-    button:hover { background:#1d4ed8; }
-    button.secondary { background:#6b7280; font-size:13px; padding:7px; }
-    button.secondary:hover { background:#4b5563; }
-    .status { margin-top:6px; font-size:14px; }
-    .file-item { background:#f9fafb; border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; cursor:pointer; }
-    .file-item:hover { background:#eef4ff; }
-    .muted { color:#666; font-size:12px; }
+<meta charset="UTF-8"/>
+<title>نظام الخرائط</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Tahoma,Arial,sans-serif;display:flex;height:100vh;width:100vw;overflow:hidden;background:#f3f4f6;}
+#map{position:absolute;top:0;left:0;bottom:0;right:320px;z-index:1;}
+.side{position:absolute;top:0;right:0;width:320px;height:100vh;background:#f3f4f6;border-left:1px solid #ddd;overflow-y:auto;z-index:100;padding:8px;}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:8px;}
+h2{color:#16325c;font-size:15px;margin-bottom:8px;}
+h3{color:#374151;font-size:13px;margin-bottom:6px;}
+input[type=text],input[type=password],input[type=file],select{
+  width:100%;padding:8px 10px;margin-bottom:6px;border:1px solid #ccc;
+  border-radius:8px;font-size:13px;outline:none;font-family:inherit;}
+input:focus,select:focus{border-color:#2563eb;}
+button{width:100%;padding:9px;background:#2563eb;color:#fff;border:0;
+  border-radius:8px;font-size:14px;cursor:pointer;margin-bottom:5px;font-family:inherit;}
+button:hover{background:#1d4ed8;}
+button.sec{background:#6b7280;font-size:12px;padding:7px;}
+button.sec:hover{background:#4b5563;}
+button.grn{background:#16a34a;}button.grn:hover{background:#15803d;}
+button.red{background:#dc2626;}button.red:hover{background:#b91c1c;}
+button.org{background:#d97706;}button.org:hover{background:#b45309;}
+button.sm{width:auto;padding:5px 10px;font-size:12px;margin:0;}
 
-    /* شاشة اللوجن */
-    #loginOverlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; display:flex; align-items:center; justify-content:center; }
-    #loginBox { background:#fff; border-radius:16px; padding:30px 24px; width:320px; text-align:center; box-shadow:0 8px 40px rgba(0,0,0,0.3); }
-    #loginBox h2 { color:#16325c; font-size:20px; margin-bottom:16px; }
-    #loginError { color:#b91c1c; font-size:13px; margin-top:6px; min-height:18px; }
+/* البحث */
+.tabs{display:flex;gap:5px;margin-bottom:8px;}
+.tab{flex:1;padding:6px;font-size:12px;border:1px solid #ccc;border-radius:7px;
+  background:#f9fafb;cursor:pointer;color:#333;width:auto;}
+.tab.on{background:#2563eb;color:#fff;border-color:#2563eb;}
+.sw{position:relative;margin-bottom:5px;}
+.sw input{padding-right:30px;margin:0;}
+.si{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#999;font-size:15px;pointer-events:none;}
+.geo-results{border:1px solid #ddd;border-radius:8px;background:#fff;max-height:260px;
+  overflow-y:auto;margin-bottom:5px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);}
+.geo-item{padding:9px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:13px;}
+.geo-item:last-child{border-bottom:none;}
+.geo-item:hover{background:#eef4ff;}
+.geo-st{font-size:11px;color:#888;min-height:14px;margin-bottom:3px;}
+.ri{background:#f9fafb;border:1px solid #ddd;border-radius:8px;padding:8px;margin-bottom:5px;cursor:pointer;font-size:13px;}
+.ri:hover{background:#eef4ff;}
+.cnt{color:#16325c;font-weight:bold;font-size:12px;margin-bottom:5px;}
+.muted{color:#777;font-size:12px;}
 
-    /* فلتر الطبقات */
-    #filterCard { display:none; }
-    #layerFilter { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px; }
-    .lbtn { padding:4px 10px; font-size:12px; border-radius:6px; border:1px solid #ccc; background:#f9fafb; cursor:pointer; color:#333; width:auto; }
-    .lbtn:hover { background:#eef4ff; }
-    .lbtn.on { background:#2563eb; color:#fff; border-color:#2563eb; }
-    .layer-stats { font-size:11px; color:#888; }
+/* الطبقات */
+#layerFilter{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;}
+.lbtn{padding:3px 8px;font-size:11px;border-radius:5px;border:1px solid #ccc;
+  background:#f9fafb;cursor:pointer;color:#333;width:auto;}
+.lbtn.on{background:#2563eb;color:#fff;border-color:#2563eb;}
+.lst{font-size:11px;color:#888;}
 
-    /* البحث */
-    .search-tabs { display:flex; gap:6px; margin-bottom:8px; }
-    .tab-btn { flex:1; padding:7px; font-size:12px; border:1px solid #ccc; border-radius:8px; background:#f9fafb; cursor:pointer; color:#333; width:auto; }
-    .tab-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
-    .search-wrap { position:relative; margin-bottom:6px; }
-    .search-wrap input { margin:0; padding-left:36px; }
-    .search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#999; font-size:16px; pointer-events:none; }
-    .geo-results { border:1px solid #ddd; border-radius:10px; background:#fff; max-height:300px; overflow-y:auto; margin-bottom:6px; display:none; box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-    .geo-item { padding:10px 12px; cursor:pointer; border-bottom:1px solid #f0f0f0; transition:background .1s; }
-    .geo-item:last-child { border-bottom:none; }
-    .geo-item:hover { background:#eef4ff; }
-    .geo-status { font-size:12px; color:#888; min-height:16px; margin-bottom:4px; }
+/* الملفات */
+.fi{background:#f9fafb;border:1px solid #ddd;border-radius:8px;padding:9px;
+  margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+.fi-info{cursor:pointer;flex:1;}
+.fi-info:hover .fi-name{color:#2563eb;}
+.fi-name{font-weight:bold;font-size:13px;color:#111;}
+.fi-sub{font-size:11px;color:#888;margin-top:2px;}
+.fi-del{background:#dc2626;color:#fff;border:none;padding:4px 8px;border-radius:6px;
+  cursor:pointer;font-size:11px;width:auto;margin:0;flex-shrink:0;}
+.fi-del:hover{background:#b91c1c;}
 
-    /* نتائج البحث الداخلي */
-    .result-item { background:#f9fafb; border:1px solid #ddd; border-radius:8px; padding:9px; margin-bottom:6px; cursor:pointer; }
-    .result-item:hover { background:#eef4ff; }
-    .count { color:#16325c; font-weight:bold; font-size:13px; margin-bottom:6px; }
-  
-  /* لوحة الإدارة */
+/* الإدارة */
+.ar{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.ar input,.ar select{flex:1;width:auto;min-width:0;margin:0;padding:7px 8px;font-size:12px;}
+.ar button{width:auto;margin:0;padding:6px 10px;font-size:12px;}
+#userTable{width:100%;border-collapse:collapse;font-size:12px;}
+#userTable th{background:#f3f4f6;padding:6px;text-align:right;font-weight:600;}
+#userTable td{padding:6px;border-bottom:1px solid #f0f0f0;}
+.rb{padding:2px 7px;border-radius:8px;font-size:10px;font-weight:600;}
+.ra{background:#dbeafe;color:#1d4ed8;}.ru{background:#d1fae5;color:#065f46;}
+.amsg{font-size:12px;margin-top:4px;min-height:15px;}
 
-  #adminPanel {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    z-index: 9998; display: none; align-items: center; justify-content: center;
-  }
-  #adminBox {
-    background: #fff; border-radius: 16px; padding: 28px 24px;
-    width: 480px; max-height: 85vh; overflow-y: auto;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
-  }
-  #adminBox h2 { color: #16325c; margin: 0 0 18px; font-size: 18px; }
-  .admin-section { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 16px; }
-  .admin-section h3 { color: #374151; font-size: 14px; margin: 0 0 10px; }
-  .admin-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .admin-row input[type="text"],
-  .admin-row input[type="password"] {
-    flex: 1 !important;
-    width: auto !important;
-    min-width: 0 !important;
-    padding: 7px 10px !important;
-    margin-bottom: 0 !important;
-    border: 1px solid #ccc !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    outline: none !important;
-    box-sizing: border-box !important;
-  }
-  .admin-row input[type="text"]:focus,
-  .admin-row input[type="password"]:focus { border-color: #2563eb !important; }
-  .admin-row select {
-    flex: 1 !important;
-    width: auto !important;
-    min-width: 0 !important;
-    padding: 7px 10px !important;
-    border: 1px solid #ccc !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    background: #fff !important;
-  }
-  .admin-row .btn-add,
-  .admin-row .btn-pass {
-    width: auto !important;
-    padding: 7px 14px !important;
-    margin-bottom: 0 !important;
-    flex-shrink: 0 !important;
-  }
-  .btn-add { background: #16a34a; color: #fff; border: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; white-space: nowrap; }
-  .btn-add:hover { background: #15803d; }
-  .btn-del { background: #dc2626; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-  .btn-del:hover { background: #b91c1c; }
-  .btn-pass { background: #d97706; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-  .btn-pass:hover { background: #b45309; }
-  #userTable { width: 100%; border-collapse: collapse; font-size: 13px; }
-  #userTable th { background: #f3f4f6; padding: 7px; text-align: right; font-weight: 600; }
-  #userTable td { padding: 7px; border-bottom: 1px solid #f0f0f0; }
-  .role-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-  .role-admin { background: #dbeafe; color: #1d4ed8; }
-  .role-user  { background: #d1fae5; color: #065f46; }
-  .admin-msg  { font-size: 13px; margin-top: 6px; min-height: 18px; }
-  .close-btn  { float: left; background: none; border: none; font-size: 22px; cursor: pointer; color: #6b7280; padding: 0; line-height: 1; }
-  .close-btn:hover { color: #111; }
+/* لوجن */
+#lo{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;
+  display:flex;align-items:center;justify-content:center;}
+#lb{background:#fff;border-radius:14px;padding:28px 22px;width:300px;
+  text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);}
+#lb h2{color:#16325c;font-size:19px;margin-bottom:14px;}
+#le{color:#b91c1c;font-size:12px;margin-top:5px;min-height:16px;}
 </style>
 </head>
 <body>
 
-<div id="loginOverlay">
-  <div id="loginBox">
+<!-- لوجن -->
+<div id="lo">
+  <div id="lb">
     <h2>🗺️ نظام الخرائط</h2>
-    <input type="text" id="loginUser" placeholder="اسم المستخدم" />
-    <input type="password" id="loginPass" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()" />
+    <input type="text" id="lu" placeholder="اسم المستخدم"/>
+    <input type="password" id="lp" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button onclick="doLogin()">دخول</button>
-    <div id="loginError"></div>
-  </div>
-</div>
-
-      <div class="admin-msg" id="addMsg"></div>
-    </div>
-
-    <!-- قائمة المستخدمين -->
-    <div class="admin-section">
-      <h3>👥 المستخدمون الحاليون</h3>
-      <table id="userTable">
-        <thead><tr><th>المستخدم</th><th>الصلاحية</th><th>إجراءات</th></tr></thead>
-        <tbody id="userTableBody"><tr><td colspan="4" style="color:#999;text-align:center">جاري التحميل...</td></tr></tbody>
-      </table>
-    </div>
-
-    <!-- تغيير باسورد -->
-    <div class="admin-section" style="border:none;padding:0">
-      <h3>🔑 تغيير كلمة مرور</h3>
-      <div class="admin-row">
-        <input type="text" id="cpUser" placeholder="اسم المستخدم" autocomplete="off"/>
-        <input type="password" id="cpPass" placeholder="كلمة المرور الجديدة" autocomplete="off"/>
-        <button class="btn-pass" onclick="changePass()">تغيير</button>
-      </div>
-      <div class="admin-msg" id="cpMsg"></div>
-    </div>
+    <div id="le"></div>
   </div>
 </div>
 
@@ -165,89 +102,90 @@
 
 <div class="side">
 
-  <!-- رفع KMZ - للأدمن فقط -->
+  <!-- أدمن: رفع KMZ -->
   <div class="card" id="uploadCard" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <h2 style="margin:0">📂 رفع KMZ</h2>
-      <button onclick="openAdmin()" style="background:#16325c;color:#fff;border:none;padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;width:auto">⚙️ أكاونتات</button>
+      <button onclick="toggleAdmin()" class="sm" style="background:#16325c">⚙️ أكاونتات</button>
     </div>
-    <input type="file" id="file" accept=".kmz">
-    <button onclick="upload()">رفع الملف</button>
-    <button class="secondary" onclick="logout()">تسجيل خروج</button>
-    <div id="status" class="status"></div>
+    <input type="file" id="fileInput" accept=".kmz"/>
+    <button class="grn" onclick="upload()">رفع الملف</button>
+    <button class="sec" onclick="logout()">تسجيل خروج</button>
+    <div id="upStatus" style="font-size:12px;margin-top:4px;color:#166534;"></div>
+  </div>
+
+  <!-- يوزر عادي: شريط علوي -->
+  <div class="card" id="userBar" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span id="uname" style="font-size:13px;color:#16325c;font-weight:bold"></span>
+      <button class="sec sm" onclick="logout()">خروج</button>
+    </div>
   </div>
 
   <!-- لوحة الإدارة -->
   <div class="card" id="adminCard" style="display:none">
     <h2>⚙️ إدارة الأكاونتات</h2>
-    <div class="admin-section">
-      <h3>➕ إضافة مستخدم</h3>
-      <div class="admin-row">
-        <input type="text" id="newUser" placeholder="اسم المستخدم" autocomplete="off"/>
-        <input type="password" id="newPass" placeholder="كلمة المرور" autocomplete="off"/>
-      </div>
-      <div class="admin-row" style="margin-top:6px">
-        <select id="newRole"><option value="user">مستخدم عادي</option><option value="admin">مشرف</option></select>
-        <button class="btn-add" onclick="addUser()">➕ إضافة</button>
-      </div>
-      <div class="admin-msg" id="addMsg"></div>
-    </div>
-    <div class="admin-section">
-      <h3>👥 المستخدمون</h3>
-      <table id="userTable">
-        <thead><tr><th>المستخدم</th><th>الصلاحية</th><th>إجراءات</th></tr></thead>
-        <tbody id="userTableBody"><tr><td colspan="3" style="color:#999;text-align:center">جاري التحميل...</td></tr></tbody>
-      </table>
-    </div>
-    <div style="padding-top:10px;border-top:1px solid #eee">
-      <h3 style="color:#374151;font-size:13px;margin:0 0 8px">🔑 تغيير كلمة مرور</h3>
-      <div class="admin-row">
-        <input type="text" id="cpUser" placeholder="اسم المستخدم" autocomplete="off"/>
-        <input type="password" id="cpPass" placeholder="الباسورد الجديد" autocomplete="off"/>
-        <button class="btn-pass" onclick="changePass()">تغيير</button>
-      </div>
-      <div class="admin-msg" id="cpMsg"></div>
-    </div>
-  </div>
 
-  <!-- زر خروج للمستخدم العادي -->
-  <div class="card" id="userBar" style="display:none">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <span id="welcomeMsg" style="font-size:13px;color:#16325c;font-weight:bold"></span>
-      <button class="secondary" onclick="logout()" style="width:auto;padding:6px 14px">تسجيل خروج</button>
+    <h3>➕ إضافة مستخدم</h3>
+    <div class="ar">
+      <input type="text" id="nUser" placeholder="اليوزر" autocomplete="off"/>
+      <input type="password" id="nPass" placeholder="الباسورد" autocomplete="off"/>
     </div>
+    <div class="ar">
+      <select id="nRole"><option value="user">مستخدم عادي</option><option value="admin">مشرف</option></select>
+      <button class="grn sm" onclick="addUser()">➕ إضافة</button>
+    </div>
+    <div class="amsg" id="addMsg"></div>
+
+    <hr style="margin:10px 0;border-color:#eee"/>
+    <h3>👥 المستخدمون</h3>
+    <table id="userTable">
+      <thead><tr><th>المستخدم</th><th>الصلاحية</th><th>إجراءات</th></tr></thead>
+      <tbody id="uBody"><tr><td colspan="3" style="color:#999;text-align:center;padding:8px">جاري التحميل...</td></tr></tbody>
+    </table>
+
+    <hr style="margin:10px 0;border-color:#eee"/>
+    <h3>🔑 تغيير كلمة مرور</h3>
+    <div class="ar">
+      <input type="text" id="cpU" placeholder="اليوزر" autocomplete="off"/>
+      <input type="password" id="cpP" placeholder="الباسورد الجديد" autocomplete="off"/>
+      <button class="org sm" onclick="changePass()">تغيير</button>
+    </div>
+    <div class="amsg" id="cpMsg"></div>
   </div>
 
   <!-- البحث -->
   <div class="card">
     <h2>🔍 البحث</h2>
-    <div class="search-tabs">
-      <button class="tab-btn active" id="tab-geo" onclick="switchTab('geo')">🌍 بحث جغرافي</button>
-      <button class="tab-btn" id="tab-features" onclick="switchTab('features')">📄 داخل الملفات</button>
+    <div class="tabs">
+      <button class="tab on" id="tGeo" onclick="switchTab('geo')">🌍 جغرافي</button>
+      <button class="tab" id="tFeat" onclick="switchTab('feat')">📄 داخل الملفات</button>
     </div>
-    <div id="panel-geo">
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="geoSearchBox" placeholder="ابحث عن منطقة، مستشفى، مطعم..." oninput="geoDebounced()" autocomplete="off"/>
+
+    <div id="pGeo">
+      <div class="sw">
+        <span class="si">🔍</span>
+        <input type="text" id="geoBox" placeholder="منطقة، مستشفى، مطعم، حي..." oninput="geoDelay()" autocomplete="off" style="padding-right:28px"/>
       </div>
-      <div class="geo-status" id="geoStatus"></div>
-      <div class="geo-results" id="geoResults"></div>
+      <div class="geo-st" id="geoSt"></div>
+      <div class="geo-results" id="geoRes"></div>
     </div>
-    <div id="panel-features" style="display:none">
-      <input type="text" id="searchBox" placeholder="ابحث بأي اسم أو قيمة..." oninput="searchFeatures()"/>
-      <div id="searchCount" class="count"></div>
-      <div id="results"><div class="muted">لا توجد نتائج</div></div>
+
+    <div id="pFeat" style="display:none">
+      <input type="text" id="featBox" placeholder="ابحث بأي اسم أو قيمة..." oninput="searchFeat()"/>
+      <div id="featCnt" class="cnt"></div>
+      <div id="featRes"><div class="muted">لا توجد نتائج</div></div>
     </div>
   </div>
 
-  <!-- فلتر الطبقات -->
+  <!-- الطبقات -->
   <div class="card" id="filterCard" style="display:none">
     <h2>🔧 الطبقات</h2>
     <div id="layerFilter"></div>
-    <div class="layer-stats" id="layerStats"></div>
+    <div class="lst" id="layerSt"></div>
   </div>
 
-  <!-- الملفات المرفوعة -->
+  <!-- الملفات -->
   <div class="card">
     <h2>📁 الملفات المرفوعة</h2>
     <div id="filesList"><div class="muted">لا توجد ملفات</div></div>
@@ -255,350 +193,246 @@
 
 </div>
 
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 <script>
-// ===== اللوجن =====
+// ===== المتغيرات العامة =====
 let isAdmin = false;
-async function doLogin() {
-  const u=document.getElementById('loginUser').value.trim();
-  const p=document.getElementById('loginPass').value;
-  document.getElementById('loginError').textContent='';
-  if(!u||!p){document.getElementById('loginError').textContent='أدخل اليوزر والباسورد';return;}
-  try {
-    const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
-    const d=await res.json();
-    if(d.success){
-      _adminCreds = { username: u, password: p };
-      document.getElementById('loginOverlay').style.display='none';
-      if(d.role === 'admin'){
-        isAdmin=true;
-        document.getElementById('uploadCard').style.display='block';
-      }
-      document.getElementById('userBar').style.display='block';
-      document.getElementById('welcomeMsg').textContent='👤 ' + u;
-      loadFiles();
-    } else {
-      document.getElementById('loginError').textContent=d.error||'خطأ';
-    }
-  } catch(e){document.getElementById('loginError').textContent='تعذر الاتصال';}
-}
-function logout(){
-  isAdmin=false;
-  _adminCreds = { username:'', password:'' };
-  document.getElementById('uploadCard').style.display='none';
-  document.getElementById('adminCard').style.display='none';
-  document.getElementById('userBar').style.display='none';
-  document.getElementById('filterCard').style.display='none';
-  document.getElementById('loginUser').value='';
-  document.getElementById('loginPass').value='';
-  document.getElementById('loginOverlay').style.display='flex';
-}
+let _creds  = { username:'', password:'' };
+let PLACES  = [];
+let allLayers = {};
+let searchable = [];
 
 // ===== الخريطة =====
-const map = L.map('map').setView([31.0, 47.0], 8);
+const map = L.map('map').setView([31.0,47.0],8);
 const baseMaps = {
-  '🗺️ Google Maps': L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ar',{subdomains:'0123',maxZoom:22,attribution:'© Google'}),
-  '🛰️ Google Hybrid': L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&hl=ar',{subdomains:'0123',maxZoom:22,attribution:'© Google'}),
+  '🗺️ Google Maps':     L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ar',{subdomains:'0123',maxZoom:22,attribution:'© Google'}),
+  '🛰️ Google Hybrid':   L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&hl=ar',{subdomains:'0123',maxZoom:22,attribution:'© Google'}),
   '📡 Google Satellite': L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{subdomains:'0123',maxZoom:22,attribution:'© Google'}),
-  '🔵 OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}),
+  '🔵 OpenStreetMap':    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OSM'}),
 };
 baseMaps['🗺️ Google Maps'].addTo(map);
 L.control.layers(baseMaps,{},{position:'topright',collapsed:false}).addTo(map);
 
-// ===== بيانات الأماكن =====
-let PLACES_INDEX = [];
-fetch('/api/places').then(r=>r.json()).then(data=>{
-  PLACES_INDEX = data;
-  console.log('Places loaded:', data.length);
-}).catch(()=>console.warn('Places not loaded'));
+// ===== تحميل الأماكن =====
+fetch('/api/places').then(r=>r.json()).then(d=>{
+  PLACES = d;
+  console.log('Places loaded:',d.length);
+}).catch(()=>{});
 
-// ===== إدارة الطبقات =====
-let allLayers={};
-let searchableFeatures=[];
+// ===== اللوجن =====
+async function doLogin(){
+  const u=document.getElementById('lu').value.trim();
+  const p=document.getElementById('lp').value;
+  document.getElementById('le').textContent='';
+  if(!u||!p){document.getElementById('le').textContent='أدخل اليوزر والباسورد';return;}
+  try{
+    const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await res.json();
+    if(d.success){
+      _creds={username:u,password:p};
+      document.getElementById('lo').style.display='none';
+      if(d.role==='admin'){
+        isAdmin=true;
+        document.getElementById('uploadCard').style.display='block';
+      } else {
+        document.getElementById('userBar').style.display='block';
+        document.getElementById('uname').textContent='👤 '+u;
+      }
+      loadFiles();
+    } else {
+      document.getElementById('le').textContent=d.error||'خطأ';
+    }
+  }catch(e){document.getElementById('le').textContent='تعذر الاتصال';}
+}
 
-function isFatFeature(f){
+function logout(){
+  isAdmin=false; _creds={username:'',password:''};
+  ['uploadCard','userBar','adminCard','filterCard'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('lu').value='';
+  document.getElementById('lp').value='';
+  document.getElementById('lo').style.display='flex';
+  document.getElementById('filesList').innerHTML='<div class="muted">لا توجد ملفات</div>';
+  clearAllLayers();
+}
+
+// ===== إدارة الأكاونتات =====
+function toggleAdmin(){
+  const c=document.getElementById('adminCard');
+  const show=c.style.display==='none';
+  c.style.display=show?'block':'none';
+  if(show) loadUsers();
+}
+
+async function loadUsers(){
+  try{
+    const res=await fetch('/api/users/list',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_creds)});
+    const data=await res.json();
+    const tb=document.getElementById('uBody');
+    if(!Array.isArray(data)){tb.innerHTML='<tr><td colspan="3" style="color:red">خطأ</td></tr>';return;}
+    tb.innerHTML=data.map(u=>`<tr>
+      <td><b>${u.username}</b></td>
+      <td><span class="rb ${u.role==='admin'?'ra':'ru'}">${u.role==='admin'?'مشرف':'مستخدم'}</span></td>
+      <td>${u.username!==_creds.username?`<button class="red sm fi-del" onclick="delUser('${u.username}')">حذف</button>`:'<span style="color:#999;font-size:11px">أنت</span>'}</td>
+    </tr>`).join('');
+  }catch(e){document.getElementById('uBody').innerHTML='<tr><td colspan="3" style="color:red">تعذر التحميل</td></tr>';}
+}
+
+async function addUser(){
+  const u=document.getElementById('nUser').value.trim();
+  const p=document.getElementById('nPass').value;
+  const r=document.getElementById('nRole').value;
+  const msg=document.getElementById('addMsg');
+  if(!u||!p){msg.style.color='#dc2626';msg.textContent='أدخل اليوزر والباسورد';return;}
+  try{
+    const res=await fetch('/api/users/add',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({..._creds,newUser:u,newPass:p,newRole:r})});
+    const d=await res.json();
+    if(d.success){
+      msg.style.color='#16a34a';msg.textContent='✅ تم الإضافة';
+      document.getElementById('nUser').value='';
+      document.getElementById('nPass').value='';
+      loadUsers();
+    } else {msg.style.color='#dc2626';msg.textContent=d.error||'خطأ';}
+  }catch(e){msg.style.color='#dc2626';msg.textContent='تعذر الاتصال';}
+}
+
+async function delUser(target){
+  if(!confirm(`حذف المستخدم "${target}"؟`))return;
+  try{
+    const res=await fetch('/api/users/delete',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({..._creds,targetUser:target})});
+    const d=await res.json();
+    if(d.success) loadUsers();
+    else alert(d.error||'خطأ');
+  }catch(e){alert('تعذر الاتصال');}
+}
+
+async function changePass(){
+  const u=document.getElementById('cpU').value.trim();
+  const p=document.getElementById('cpP').value;
+  const msg=document.getElementById('cpMsg');
+  if(!u||!p){msg.style.color='#dc2626';msg.textContent='أدخل اليوزر والباسورد الجديد';return;}
+  try{
+    const res=await fetch('/api/users/changepass',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({..._creds,targetUser:u,newPass:p})});
+    const d=await res.json();
+    if(d.success){
+      msg.style.color='#16a34a';msg.textContent='✅ تم التغيير';
+      document.getElementById('cpU').value='';
+      document.getElementById('cpP').value='';
+    } else {msg.style.color='#dc2626';msg.textContent=d.error||'خطأ';}
+  }catch(e){msg.style.color='#dc2626';msg.textContent='تعذر الاتصال';}
+}
+
+// ===== رسم الطبقات =====
+function isFAT(f){
   const p=f.properties||{};
   const folder=(p._folder||'').toLowerCase();
-  if(/^fat[s]?$/i.test(folder.trim())) return true;
-  if(p.FAT_LABEL||p['FAT #']||p.Stracture) return true;
-  return false;
+  return /^fat[s]?$/i.test(folder.trim())||!!(p.FAT_LABEL||p['FAT #']||p.Stracture);
 }
-function featureToHtml(f){
+function propsHtml(f){
   const p=f.properties||{};
-  let h='<div style="max-width:280px;font-size:13px">';
-  for(let k in p){if(k.startsWith('_')||p[k]===null||p[k]==='')continue;h+=`<b>${k}</b>: ${p[k]}<br>`;}
+  let h='<div style="max-width:260px;font-size:12px">';
+  for(let k in p){if(!k.startsWith('_')&&p[k]!==null&&p[k]!=='')h+=`<b>${k}</b>: ${p[k]}<br>`;}
   return h+'</div>';
 }
-function setStatus(msg,type=''){
-  const el=document.getElementById('status');
-  el.textContent=msg;
-  el.style.color=type==='error'?'#b91c1c':'#166534';
-}
-function clearAll(){
+function clearAllLayers(){
   Object.values(allLayers).forEach(l=>{if(l.cluster)map.removeLayer(l.cluster);if(l.shapes)map.removeLayer(l.shapes);});
-  allLayers={};searchableFeatures=[];
+  allLayers={};searchable=[];
   document.getElementById('layerFilter').innerHTML='';
   document.getElementById('filterCard').style.display='none';
 }
-function renderLayerButtons(){
-  const box=document.getElementById('layerFilter');
-  box.innerHTML='';
+
+function showGeoJSON(data){
+  clearAllLayers();
+  const feats=data.features||[];
+  const fatPts=[],otherPts=[],polys=[],lines=[];
+  feats.forEach(f=>{
+    const t=f.geometry&&f.geometry.type;if(!t)return;
+    if(t==='Point'||t==='MultiPoint'){isFAT(f)?fatPts.push(f):otherPts.push(f);}
+    else if(t.includes('Polygon'))polys.push(f);
+    else if(t.includes('Line'))lines.push(f);
+  });
+
+  function addPts(arr,col,key,label,fat){
+    if(!arr.length)return;
+    const cl=L.markerClusterGroup({chunkedLoading:true,chunkDelay:50});
+    const refs=[];
+    arr.forEach(f=>{
+      const ll=[f.geometry.coordinates[1],f.geometry.coordinates[0]];
+      const m=fat?L.circleMarker(ll,{radius:6,fillColor:col,color:'#fff',weight:1,fillOpacity:.95}):L.marker(ll);
+      m.bindPopup(propsHtml(f));cl.addLayer(m);refs.push(m);
+    });
+    cl.addTo(map);
+    allLayers[key]={cluster:cl,shapes:null,features:arr,visible:true,isFAT:fat,label,refs};
+    arr.forEach((f,i)=>searchable.push({feature:f,marker:refs[i],txt:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
+  }
+
+  addPts(fatPts,'#f97316','fat','📡 FAT',true);
+  addPts(otherPts,'#2563eb','pts','📍 نقاط أخرى',false);
+
+  if(polys.length){
+    const s=L.geoJSON({type:'FeatureCollection',features:polys},{style:{color:'#2563eb',weight:2,fillOpacity:.15},onEachFeature:(f,l)=>l.bindPopup(propsHtml(f))}).addTo(map);
+    allLayers['poly']={cluster:null,shapes:s,features:polys,visible:true,isFAT:false,label:'⬡ مضلعات'};
+    polys.forEach(f=>searchable.push({feature:f,marker:null,txt:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
+  }
+  if(lines.length){
+    const s=L.geoJSON({type:'FeatureCollection',features:lines},{style:{color:'#7c3aed',weight:2},onEachFeature:(f,l)=>l.bindPopup(propsHtml(f))}).addTo(map);
+    allLayers['line']={cluster:null,shapes:s,features:lines,visible:true,isFAT:false,label:'〰 خطوط'};
+    lines.forEach(f=>searchable.push({feature:f,marker:null,txt:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
+  }
+
+  renderLayers();
+  try{map.fitBounds(L.geoJSON(data).getBounds(),{padding:[20,20]});}catch(e){}
+}
+
+function renderLayers(){
+  const box=document.getElementById('layerFilter');box.innerHTML='';
   document.getElementById('filterCard').style.display='block';
 
-  const fatOnlyBtn=document.createElement('button');
-  fatOnlyBtn.className='lbtn';fatOnlyBtn.textContent='📡 FAT فقط';
-  fatOnlyBtn.onclick=()=>{Object.keys(allLayers).forEach(k=>setLayerVisible(k,allLayers[k].isFAT));renderLayerButtons();};
-  box.appendChild(fatOnlyBtn);
-
-  const allBtn=document.createElement('button');
-  allBtn.className='lbtn';allBtn.textContent='🗺️ الكل';
-  allBtn.onclick=()=>{Object.keys(allLayers).forEach(k=>setLayerVisible(k,true));renderLayerButtons();};
-  box.appendChild(allBtn);
+  [['📡 FAT فقط',()=>{Object.keys(allLayers).forEach(k=>setVis(k,allLayers[k].isFAT));renderLayers();}],
+   ['🗺️ الكل',()=>{Object.keys(allLayers).forEach(k=>setVis(k,true));renderLayers();}]
+  ].forEach(([txt,fn])=>{
+    const b=document.createElement('button');b.className='lbtn';b.textContent=txt;b.onclick=fn;box.appendChild(b);
+  });
 
   Object.keys(allLayers).forEach(k=>{
     const l=allLayers[k];
-    const btn=document.createElement('button');
-    btn.className='lbtn'+(l.visible?' on':'');
-    btn.textContent=`${l.isFAT?'📡':l.isPolygon?'⬡':'•'} ${l.label} (${l.features.length})`;
-    btn.onclick=()=>{setLayerVisible(k,!l.visible);renderLayerButtons();};
-    box.appendChild(btn);
+    const b=document.createElement('button');
+    b.className='lbtn'+(l.visible?' on':'');
+    b.textContent=`${l.label} (${l.features.length})`;
+    b.onclick=()=>{setVis(k,!l.visible);renderLayers();};
+    box.appendChild(b);
   });
 
   const total=Object.values(allLayers).reduce((s,l)=>s+l.features.length,0);
   const fat=Object.values(allLayers).filter(l=>l.isFAT).reduce((s,l)=>s+l.features.length,0);
-  document.getElementById('layerStats').textContent=`إجمالي: ${total.toLocaleString()} | FAT: ${fat.toLocaleString()}`;
+  document.getElementById('layerSt').textContent=`إجمالي: ${total.toLocaleString()} | FAT: ${fat.toLocaleString()}`;
 }
-function setLayerVisible(k,show){
+
+function setVis(k,show){
   const l=allLayers[k];if(!l)return;l.visible=show;
   if(show){if(l.cluster)l.cluster.addTo(map);if(l.shapes)l.shapes.addTo(map);}
   else{if(l.cluster)map.removeLayer(l.cluster);if(l.shapes)map.removeLayer(l.shapes);}
 }
-function showGeoJSON(data){
-  clearAll();searchableFeatures=[];
-  const features=data.features||[];
-  const fatPts=[],otherPts=[],polys=[],lines=[];
-  features.forEach(f=>{
-    const gt=f.geometry&&f.geometry.type;if(!gt)return;
-    if(gt==='Point'||gt==='MultiPoint'){if(isFatFeature(f))fatPts.push(f);else otherPts.push(f);}
-    else if(gt.includes('Polygon'))polys.push(f);
-    else if(gt.includes('Line'))lines.push(f);
-  });
 
-  function addPointLayer(feats,col,key,label,isFAT){
-    if(!feats.length)return;
-    const cluster=L.markerClusterGroup({chunkedLoading:true,chunkDelay:50});
-    const refs=[];
-    feats.forEach(f=>{
-      const ll=[f.geometry.coordinates[1],f.geometry.coordinates[0]];
-      const m=isFAT
-        ?L.circleMarker(ll,{radius:6,fillColor:col,color:'#fff',weight:1,fillOpacity:0.95})
-        :L.marker(ll);
-      m.bindPopup(featureToHtml(f));cluster.addLayer(m);refs.push(m);
-    });
-    cluster.addTo(map);
-    allLayers[key]={cluster,shapes:null,features:feats,visible:true,isFAT,isPolygon:false,label,refs};
-    feats.forEach((f,i)=>searchableFeatures.push({feature:f,marker:refs[i],searchText:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
-  }
-
-  addPointLayer(fatPts,'#f97316','fat','FAT',true);
-  addPointLayer(otherPts,'#2563eb','points','نقاط أخرى',false);
-
-  if(polys.length){
-    const shapes=L.geoJSON({type:'FeatureCollection',features:polys},{style:{color:'#2563eb',weight:2,fillOpacity:0.15},onEachFeature:(f,l)=>l.bindPopup(featureToHtml(f))}).addTo(map);
-    allLayers['polygons']={cluster:null,shapes,features:polys,visible:true,isFAT:false,isPolygon:true,label:'مضلعات'};
-    polys.forEach(f=>searchableFeatures.push({feature:f,marker:null,searchText:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
-  }
-  if(lines.length){
-    const shapes=L.geoJSON({type:'FeatureCollection',features:lines},{style:{color:'#7c3aed',weight:2},onEachFeature:(f,l)=>l.bindPopup(featureToHtml(f))}).addTo(map);
-    allLayers['lines']={cluster:null,shapes,features:lines,visible:true,isFAT:false,isPolygon:false,label:'خطوط'};
-    lines.forEach(f=>searchableFeatures.push({feature:f,marker:null,searchText:Object.values(f.properties||{}).filter(Boolean).join(' ').toLowerCase()}));
-  }
-
-  renderLayerButtons();
-  try{map.fitBounds(L.geoJSON(data).getBounds(),{padding:[20,20]});}catch(e){}
-  renderResults([]);
-}
-
-// ===== البحث الداخلي =====
-function zoomToFeature(item){
-  if(item.marker){
-    const ll=item.marker.getLatLng?item.marker.getLatLng():{lat:item.feature.geometry.coordinates[1],lng:item.feature.geometry.coordinates[0]};
-    map.setView([ll.lat,ll.lng],17);if(item.marker.openPopup)item.marker.openPopup();
-  } else {try{map.fitBounds(L.geoJSON(item.feature).getBounds(),{padding:[30,30]});}catch(e){}}
-}
-function renderResults(items){
-  const box=document.getElementById('results');box.innerHTML='';
-  if(!items.length){box.innerHTML='<div class="muted">لا توجد نتائج</div>';return;}
-  items.forEach(item=>{
-    const p=item.feature.properties||{};
-    const title=Object.values(p).find(v=>v&&!String(v).startsWith('_'))||'بدون اسم';
-    const div=document.createElement('div');div.className='result-item';
-    div.innerHTML=`<div><b>${title}</b></div><div class="muted">${Object.entries(p).filter(([k])=>!k.startsWith('_')).slice(0,3).map(([k,v])=>`${k}: ${v}`).join(' | ')}</div>`;
-    div.onclick=()=>zoomToFeature(item);
-    box.appendChild(div);
-  });
-}
-function searchFeatures(){
-  const q=document.getElementById('searchBox').value.trim().toLowerCase();
-  const c=document.getElementById('searchCount');
-  if(!q){c.textContent='';renderResults([]);return;}
-  const res=searchableFeatures.filter(i=>i.searchText.includes(q)).slice(0,100);
-  c.textContent=`عدد النتائج: ${res.length}`;renderResults(res);
-}
-
-// ===== البحث الجغرافي =====
-let geoTimer=null;
-const typeAr={
-  city:'🏙️ مدينة',town:'🏙️ مدينة',suburb:'🏘️ حي',neighbourhood:'🏘️ حي',
-  quarter:'🏘️ منطقة',hamlet:'🏡 قرية',village:'🏡 قرية',locality:'📍 منطقة',
-  island:'🏝️ جزيرة',school:'🏫 مدرسة',university:'🎓 جامعة',
-  hospital:'🏥 مستشفى',clinic:'🏥 عيادة',doctors:'🏥 طبيب',
-  pharmacy:'💊 صيدلية',mosque:'🕌 مسجد',place_of_worship:'🕌 مسجد',
-  restaurant:'🍽️ مطعم',cafe:'☕ كافيه',fast_food:'🍔 وجبات',
-  bank:'🏦 بنك',fuel:'⛽ وقود',police:'👮 شرطة',
-  fire_station:'🚒 إطفاء',kindergarten:'🏫 روضة',
-  bureau_de_change:'💱 صرافة',dentist:'🦷 أسنان',
-  supermarket:'🛒 سوبرماركت',marketplace:'🛍️ سوق',
-  library:'📚 مكتبة',hotel:'🏨 فندق',park:'🌳 حديقة',stadium:'🏟️ ملعب'
-};
-
-function geoDebounced(){clearTimeout(geoTimer);geoTimer=setTimeout(doGeoSearch,150);}
-
-async function doGeoSearch(){
-  const q=document.getElementById('geoSearchBox').value.trim();
-  const box=document.getElementById('geoResults');
-  const status=document.getElementById('geoStatus');
-  if(!q){box.style.display='none';status.textContent='';return;}
-  box.innerHTML='';
-
-  // إحداثيات
-  const cm=q.match(/(-?\d+[.,]\d*)\s*[,،\s]+\s*(-?\d+[.,]\d*)/);
-  if(cm){
-    const lat=parseFloat(cm[1].replace(',','.')),lon=parseFloat(cm[2].replace(',','.'));
-    if(lat>=29&&lat<=38&&lon>=38&&lon<=49){
-      map.setView([lat,lon],17);
-      L.marker([lat,lon]).addTo(map).bindPopup(`📍 ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
-      box.style.display='none';status.textContent='';return;
-    }
-  }
-
-  if(q.length<1)return;
-
-  // بحث محلي
-  const ql=q.toLowerCase().trim();
-  const typeOrder={city:0,town:1,suburb:2,neighbourhood:3,quarter:4,hospital:5,university:5,school:6,mosque:6,pharmacy:6,bank:6,hamlet:7,village:8,locality:9};
-  const hits=PLACES_INDEX
-    .filter(p=>p.sk&&p.sk.includes(ql))
-    .sort((a,b)=>{
-      const aE=a.sk===ql?-1:a.sk.startsWith(ql)?0:1;
-      const bE=b.sk===ql?-1:b.sk.startsWith(ql)?0:1;
-      return(aE-bE)||((typeOrder[a.type]??10)-(typeOrder[b.type]??10));
-    }).slice(0,8);
-
-  if(hits.length>0){
-    hits.forEach(p=>{
-      const div=document.createElement('div');div.className='geo-item';
-      const tl=typeAr[p.type]||'📍 موقع';
-      const icon=tl.split(' ')[0];
-      const label=tl.split(' ').slice(1).join(' ');
-      const govColor=p.gov==='البصرة'?'#f97316':'#22d3ee';
-      div.innerHTML=`<div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:20px;min-width:24px">${icon}</span>
-        <div>
-          <div style="font-weight:600;font-size:14px">${p.name}</div>
-          <div style="font-size:11px;color:#888;margin-top:2px">
-            <span style="background:${govColor};color:#fff;padding:1px 8px;border-radius:10px;margin-left:5px">${p.gov}</span>
-            ${label}${p.name_en?` <span style="color:#bbb">· ${p.name_en}</span>`:''}
-          </div>
-        </div></div>`;
-      div.onclick=()=>{
-        const zoom=['city','town'].includes(p.type)?13:['suburb','neighbourhood','quarter'].includes(p.type)?15:16;
-        map.setView([p.lat,p.lon],zoom);
-        const m=L.marker([p.lat,p.lon]).addTo(map).bindPopup(`<b>${p.name}</b><br><small>${label} · ${p.gov}</small>`).openPopup();
-        setTimeout(()=>map.removeLayer(m),10000);
-        box.style.display='none';
-        document.getElementById('geoSearchBox').value=p.name;
-        status.textContent='';
-      };
-      box.appendChild(div);
-    });
-    box.style.display='block';
-    status.textContent='';
-  }
-
-  // Nominatim fallback
-  if(ql.length>=2){
-    const VIEWBOX='44.5,33.8,48.8,29.0';
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&accept-language=ar,en&countrycodes=iq&viewbox=${VIEWBOX}&bounded=1&addressdetails=1`,
-      {headers:{'User-Agent':'local-map','Accept-Language':'ar,en'}})
-    .then(r=>r.json()).catch(()=>[])
-    .then(results=>{
-      const inArea=i=>{const lat=parseFloat(i.lat),lon=parseFloat(i.lon);
-        return(lat>=29&&lat<=31.5&&lon>=46.5&&lon<=48.8)||(lat>=32&&lat<=33.8&&lon>=44.5&&lon<=46.5);};
-      const localNames=new Set(hits.map(p=>p.name));
-      const extra=[];const seenIds=new Set();
-      results.filter(inArea).forEach(i=>{
-        const n=(i.display_name||'').split(',')[0].trim();
-        if(!localNames.has(n)&&!seenIds.has(i.place_id)){seenIds.add(i.place_id);extra.push(i);}
-      });
-      if(extra.length>0){
-        if(hits.length>0){
-          const sep=document.createElement('div');
-          sep.style.cssText='padding:4px 12px;font-size:11px;color:#bbb;background:#fafafa;border-top:1px solid #eee;';
-          sep.textContent='نتائج إضافية';box.appendChild(sep);
-        }
-        extra.slice(0,4).forEach(i=>{
-          const div=document.createElement('div');div.className='geo-item';
-          const name=(i.display_name||'').split(',')[0].trim();
-          const addr=(i.display_name||'').split(',').slice(1,3).join('،').trim();
-          div.innerHTML=`<div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">📍</span>
-            <div>
-              <div style="font-weight:600;font-size:14px">${name}</div>
-              ${addr?`<div style="font-size:11px;color:#888">${addr}</div>`:''}
-            </div></div>`;
-          div.onclick=()=>{
-            const lat=parseFloat(i.lat),lon=parseFloat(i.lon);
-            if(i.boundingbox){const bb=i.boundingbox.map(parseFloat);map.fitBounds([[bb[0],bb[2]],[bb[1],bb[3]]],{padding:[40,40]});}
-            else map.setView([lat,lon],17);
-            L.marker([lat,lon]).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
-            box.style.display='none';
-            document.getElementById('geoSearchBox').value=name;
-          };
-          box.appendChild(div);
-        });
-        box.style.display='block';
-      }
-      if(!hits.length&&!extra.length)status.textContent='❌ لم يتم العثور على نتائج';
-    });
-  } else if(!hits.length){
-    status.textContent='❌ لم يتم العثور على نتائج';
-  }
-}
-
-// ===== التبويبات =====
-function switchTab(tab){
-  document.getElementById('tab-geo').classList.toggle('active',tab==='geo');
-  document.getElementById('tab-features').classList.toggle('active',tab==='features');
-  document.getElementById('panel-geo').style.display=tab==='geo'?'block':'none';
-  document.getElementById('panel-features').style.display=tab==='features'?'block':'none';
-}
-
-// ===== رفع KMZ =====
+// ===== رفع ملف =====
 async function upload(){
-  const file=document.getElementById('file').files[0];
-  if(!file)return setStatus('اختر ملف','error');
-  const fd=new FormData();fd.append('file',file);setStatus('جاري الرفع...');
+  const f=document.getElementById('fileInput').files[0];
+  const st=document.getElementById('upStatus');
+  if(!f){st.style.color='#dc2626';st.textContent='اختر ملف';return;}
+  const fd=new FormData();fd.append('file',f);
+  st.style.color='#166534';st.textContent='جاري الرفع...';
   try{
     const res=await fetch('/api/upload',{method:'POST',body:fd});
-    const json=await res.json();
-    if(!res.ok)throw new Error(json.error||'فشل الرفع');
-    const geo=await fetch('/api/data/'+json.file);
+    const d=await res.json();
+    if(!res.ok)throw new Error(d.error||'فشل');
+    const geo=await fetch('/api/data/'+d.file);
     showGeoJSON(await geo.json());
-    setStatus('تم بنجاح ✅');loadFiles();
-  }catch(e){setStatus(e.message||'فشل','error');}
+    st.textContent='✅ تم بنجاح';
+    loadFiles();
+  }catch(e){st.style.color='#dc2626';st.textContent=e.message||'فشل الرفع';}
 }
 
 // ===== قائمة الملفات =====
@@ -608,96 +442,251 @@ async function loadFiles(){
     const box=document.getElementById('filesList');box.innerHTML='';
     if(!Array.isArray(files)||!files.length){box.innerHTML='<div class="muted">لا توجد ملفات</div>';return;}
     files.forEach(f=>{
-      const div=document.createElement('div');div.className='file-item';
-      div.innerHTML=`<div><b>${f.originalName||f.savedFile}</b></div><div class="muted">العناصر: ${(f.featureCount||0).toLocaleString()}</div>`;
-      div.onclick=async()=>{
-        try{const geo=await fetch('/api/data/'+f.savedFile);showGeoJSON(await geo.json());setStatus('تم التحميل');}
-        catch{setStatus('فشل التحميل','error');}
-      };
+      const div=document.createElement('div');div.className='fi';
+      div.innerHTML=`
+        <div class="fi-info" onclick="loadFile('${f.savedFile}')">
+          <div class="fi-name">${f.originalName||f.savedFile}</div>
+          <div class="fi-sub">العناصر: ${(f.featureCount||0).toLocaleString()}</div>
+        </div>
+        ${isAdmin?`<button class="fi-del" onclick="delFile('${f.savedFile}',this)">🗑️</button>`:''}`;
       box.appendChild(div);
     });
-  }catch{document.getElementById('filesList').innerHTML='<div class="muted">تعذر التحميل</div>';}
+  }catch(e){document.getElementById('filesList').innerHTML='<div class="muted">تعذر التحميل</div>';}
 }
 
-// إغلاق البحث عند الضغط خارجه
-// ====== إدارة الأكاونتات ======
-let _adminCreds = { username:'', password:'' };
-
-function openAdmin() {
-  if(!isAdmin) return;
-  const card = document.getElementById('adminCard');
-  const isVisible = card.style.display !== 'none';
-  card.style.display = isVisible ? 'none' : 'block';
-  if (!isVisible) loadUsers();
+async function loadFile(savedFile){
+  try{
+    const geo=await fetch('/api/data/'+savedFile);
+    showGeoJSON(await geo.json());
+  }catch(e){alert('فشل التحميل');}
 }
 
-async function loadUsers() {
+async function delFile(savedFile, btn){
+  if(!confirm('حذف هذا الملف؟'))return;
+  try{
+    const res=await fetch('/api/data/'+savedFile,{method:'DELETE'});
+    const d=await res.json();
+    if(d.success){clearAllLayers();loadFiles();}
+    else alert(d.error||'فشل الحذف');
+  }catch(e){alert('تعذر الاتصال');}
+}
+
+// ===== البحث الداخلي =====
+function searchFeat(){
+  const q=document.getElementById('featBox').value.trim().toLowerCase();
+  const cnt=document.getElementById('featCnt');
+  const res=document.getElementById('featRes');
+  if(!q){cnt.textContent='';res.innerHTML='<div class="muted">لا توجد نتائج</div>';return;}
+  const hits=searchable.filter(i=>i.txt.includes(q)).slice(0,100);
+  cnt.textContent=`${hits.length} نتيجة`;
+  res.innerHTML='';
+  hits.forEach(item=>{
+    const p=item.feature.properties||{};
+    const t=Object.values(p).find(v=>v&&!String(v).startsWith('_'))||'بدون اسم';
+    const d=document.createElement('div');d.className='ri';
+    d.innerHTML=`<b>${t}</b><div class="muted">${Object.entries(p).filter(([k])=>!k.startsWith('_')).slice(0,2).map(([k,v])=>`${k}: ${v}`).join(' | ')}</div>`;
+    d.onclick=()=>{
+      if(item.marker){
+        const ll=item.marker.getLatLng?item.marker.getLatLng():{lat:item.feature.geometry.coordinates[1],lng:item.feature.geometry.coordinates[0]};
+        map.setView([ll.lat,ll.lng],17);if(item.marker.openPopup)item.marker.openPopup();
+      } else {try{map.fitBounds(L.geoJSON(item.feature).getBounds(),{padding:[30,30]});}catch(e){}}
+    };
+    res.appendChild(d);
+  });
+}
+
+// ===== البحث الجغرافي - Google Places + OSM Local =====
+let geoTimer = null;
+let lastMarker = null;
+
+function geoDelay() { clearTimeout(geoTimer); geoTimer = setTimeout(doGeoSearch, 300); }
+
+const typeAr = {
+  restaurant:'🍽️ مطعم', cafe:'☕ كافيه', fast_food:'🍔 وجبات',
+  food:'🍽️ مطعم', meal_takeaway:'🍔 وجبات',
+  hospital:'🏥 مستشفى', pharmacy:'💊 صيدلية', doctor:'🏥 عيادة',
+  clinic:'🏥 عيادة', health:'🏥 صحة',
+  school:'🏫 مدرسة', university:'🎓 جامعة', primary_school:'🏫 مدرسة',
+  secondary_school:'🏫 مدرسة', library:'📚 مكتبة',
+  mosque:'🕌 مسجد', place_of_worship:'🕌 مسجد',
+  bank:'🏦 بنك', atm:'🏧 ATM', finance:'🏦 بنك',
+  gas_station:'⛽ وقود', fuel:'⛽ وقود',
+  supermarket:'🛒 سوبرماركت', grocery_or_supermarket:'🛒 سوبرماركت',
+  shopping_mall:'🛍️ مول', store:'🛍️ محل',
+  police:'👮 شرطة', fire_station:'🚒 إطفاء',
+  city:'🏙️ مدينة', town:'🏙️ مدينة', suburb:'🏘️ حي',
+  neighbourhood:'🏘️ حي', quarter:'🏘️ منطقة',
+  village:'🏡 قرية', locality:'📍 منطقة',
+  hotel:'🏨 فندق', lodging:'🏨 فندق',
+  park:'🌳 حديقة', stadium:'🏟️ ملعب',
+  government:'🏛️ حكومي', local_government_office:'🏛️ حكومي',
+  establishment:'📍 موقع', point_of_interest:'📍 موقع',
+};
+
+function getIcon(types) {
+  if (!types) return '📍';
+  const arr = Array.isArray(types) ? types : [types];
+  for (const t of arr) {
+    if (typeAr[t]) return typeAr[t].split(' ')[0];
+  }
+  return '📍';
+}
+
+function getLabel(types) {
+  if (!types) return 'موقع';
+  const arr = Array.isArray(types) ? types : [types];
+  for (const t of arr) {
+    if (typeAr[t]) return typeAr[t].split(' ').slice(1).join(' ');
+  }
+  return 'موقع';
+}
+
+function zoomToPlace(lat, lon, name, label) {
+  if (lastMarker) map.removeLayer(lastMarker);
+  map.setView([lat, lon], 17);
+  lastMarker = L.marker([lat, lon]).addTo(map)
+    .bindPopup(`<b>${name}</b><br><small>${label}</small>`).openPopup();
+  setTimeout(() => { if(lastMarker) map.removeLayer(lastMarker); lastMarker=null; }, 15000);
+}
+
+async function doGeoSearch() {
+  const q = document.getElementById('geoBox').value.trim();
+  const box = document.getElementById('geoRes');
+  const st  = document.getElementById('geoSt');
+  
+  if (!q) { box.style.display='none'; st.textContent=''; return; }
+  box.innerHTML = '';
+
+  // إحداثيات مباشرة
+  const cm = q.match(/(-?\d+[.,]\d*)\s*[,،\s]+\s*(-?\d+[.,]\d*)/);
+  if (cm) {
+    const lat=parseFloat(cm[1].replace(',','.')), lon=parseFloat(cm[2].replace(',','.'));
+    if (lat>=29&&lat<=38&&lon>=38&&lon<=49) {
+      map.setView([lat,lon],17);
+      if(lastMarker) map.removeLayer(lastMarker);
+      lastMarker = L.marker([lat,lon]).addTo(map).bindPopup(`📍 ${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
+      box.style.display='none'; st.textContent=''; return;
+    }
+  }
+
+  if (q.length < 2) return;
+  st.textContent = '🔍 جاري البحث...';
+
+  // ====== 1. بحث محلي فوري ======
+  const ql = q.toLowerCase().trim();
+  const tOrd = {city:0,town:1,suburb:2,neighbourhood:3,quarter:4,hospital:5,university:5,school:6,mosque:6,pharmacy:6,bank:6,hamlet:7,village:8,locality:9};
+  const localHits = PLACES
+    .filter(p => p.sk && p.sk.includes(ql))
+    .sort((a,b) => {
+      const aE=a.sk===ql?-1:a.sk.startsWith(ql)?0:1;
+      const bE=b.sk===ql?-1:b.sk.startsWith(ql)?0:1;
+      return (aE-bE)||((tOrd[a.type]??10)-(tOrd[b.type]??10));
+    }).slice(0, 5);
+
+  renderLocalHits(localHits, box);
+
+  // ====== 2. Google Places API (الرئيسي) ======
   try {
-    const res  = await fetch('/api/users/list', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(_adminCreds) });
+    const center = map.getCenter();
+    const res = await fetch(`/api/google-places?q=${encodeURIComponent(q)}&lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}`);
     const data = await res.json();
-    const tbody = document.getElementById('userTableBody');
-    if (!Array.isArray(data)) { tbody.innerHTML = '<tr><td colspan="4" style="color:red">خطأ في التحميل</td></tr>'; return; }
-    tbody.innerHTML = data.map(u => `
-      <tr>
-        <td><b>${u.username}</b></td>
-        <td><span class="role-badge role-${u.role}">${u.role === 'admin' ? 'مشرف' : 'مستخدم'}</span></td>
-        <td>
-          ${u.username !== _adminCreds.username ? `<button class="btn-del" onclick="deleteUser('${u.username}')">حذف</button>` : '<span style="color:#999;font-size:11px">أنت</span>'}
-        </td>
-      </tr>`).join('');
+    
+    const results = (data.results || []).filter(r => r.name && r.geometry);
+    
+    if (results.length > 0) {
+      if (localHits.length > 0) {
+        const sep = document.createElement('div');
+        sep.style.cssText = 'padding:3px 12px;font-size:10px;color:#bbb;background:#fafafa;border-top:1px solid #eee;';
+        sep.textContent = '── نتائج Google Maps ──';
+        box.appendChild(sep);
+      }
+      
+      const googleSeen = new Set(localHits.map(p => p.name));
+      
+      results.slice(0, 8).forEach(place => {
+        if (googleSeen.has(place.name)) return;
+        googleSeen.add(place.name);
+        
+        const div = document.createElement('div');
+        div.className = 'geo-item';
+        const loc = place.geometry.location;
+        const types = place.types || [];
+        const icon = getIcon(types);
+        const label = getLabel(types);
+        const addr = (place.formatted_address || '').split('،').slice(0,2).join('،');
+        const rating = place.rating ? `⭐ ${place.rating}` : '';
+        
+        div.innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <span style="font-size:20px;min-width:24px;margin-top:1px">${icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:14px">${place.name}</div>
+              <div style="font-size:11px;color:#888;margin-top:2px">${label}${addr?' · '+addr:''} ${rating}</div>
+            </div>
+          </div>`;
+        
+        div.onclick = () => {
+          zoomToPlace(loc.lat, loc.lng, place.name, label + (addr?' · '+addr:''));
+          box.style.display = 'none';
+          document.getElementById('geoBox').value = place.name;
+          st.textContent = '';
+        };
+        box.appendChild(div);
+      });
+    }
+    
+    const total = localHits.length + (results.length > 0 ? 1 : 0);
+    if (total > 0) { box.style.display='block'; st.textContent=''; }
+    else st.textContent = '❌ لم يتم العثور على نتائج';
+    
   } catch(e) {
-    document.getElementById('userTableBody').innerHTML = '<tr><td colspan="4" style="color:red">تعذر التحميل</td></tr>';
+    if (localHits.length > 0) { box.style.display='block'; st.textContent=''; }
+    else st.textContent = '⚠️ تعذر البحث';
   }
 }
 
-async function addUser() {
-  const newUser = document.getElementById('newUser').value.trim();
-  const newPass = document.getElementById('newPass').value;
-  const newRole = document.getElementById('newRole').value;
-  const msg     = document.getElementById('addMsg');
-  if (!newUser || !newPass) { msg.style.color='#dc2626'; msg.textContent='أدخل اليوزر والباسورد'; return; }
-  try {
-    const res  = await fetch('/api/users/add', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ..._adminCreds, newUser, newPass, newRole }) });
-    const data = await res.json();
-    if (data.success) {
-      msg.style.color = '#16a34a'; msg.textContent = '✅ تم إضافة المستخدم';
-      document.getElementById('newUser').value = '';
-      document.getElementById('newPass').value = '';
-      loadUsers();
-    } else {
-      msg.style.color = '#dc2626'; msg.textContent = data.error || 'خطأ';
-    }
-  } catch(e) { msg.style.color='#dc2626'; msg.textContent='تعذر الاتصال'; }
+function renderLocalHits(hits, box) {
+  hits.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'geo-item';
+    const tl = typeAr[p.type] || '📍 موقع';
+    const icon = tl.split(' ')[0];
+    const label = tl.split(' ').slice(1).join(' ');
+    const gc = p.gov==='البصرة' ? '#f97316' : '#22d3ee';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px;min-width:24px">${icon}</span>
+        <div>
+          <div style="font-weight:600;font-size:14px">${p.name}</div>
+          <div style="font-size:11px;color:#888;margin-top:1px">
+            <span style="background:${gc};color:#fff;padding:1px 8px;border-radius:8px;margin-left:4px">${p.gov}</span>
+            ${label}${p.name_en?' · '+p.name_en:''}
+          </div>
+        </div>
+      </div>`;
+    div.onclick = () => {
+      const z = ['city','town'].includes(p.type)?13:['suburb','neighbourhood','quarter'].includes(p.type)?15:16;
+      zoomToPlace(p.lat, p.lon, p.name, label+' · '+p.gov);
+      box.style.display = 'none';
+      document.getElementById('geoBox').value = p.name;
+      document.getElementById('geoSt').textContent = '';
+    };
+    box.appendChild(div);
+  });
+  if (hits.length > 0) box.style.display = 'block';
 }
 
-async function deleteUser(targetUser) {
-  if (!confirm(`هل تريد حذف المستخدم "${targetUser}"؟`)) return;
-  try {
-    const res  = await fetch('/api/users/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ..._adminCreds, targetUser }) });
-    const data = await res.json();
-    if (data.success) loadUsers();
-    else alert(data.error || 'خطأ في الحذف');
-  } catch(e) { alert('تعذر الاتصال'); }
+// ===== التبويبات =====
+function switchTab(tab){
+  document.getElementById('tGeo').classList.toggle('on',tab==='geo');
+  document.getElementById('tFeat').classList.toggle('on',tab==='feat');
+  document.getElementById('pGeo').style.display=tab==='geo'?'block':'none';
+  document.getElementById('pFeat').style.display=tab==='feat'?'block':'none';
 }
 
-async function changePass() {
-  const targetUser = document.getElementById('cpUser').value.trim();
-  const newPass    = document.getElementById('cpPass').value;
-  const msg        = document.getElementById('cpMsg');
-  if (!targetUser || !newPass) { msg.style.color='#dc2626'; msg.textContent='أدخل اليوزر وكلمة المرور الجديدة'; return; }
-  try {
-    const res  = await fetch('/api/users/changepass', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ..._adminCreds, targetUser, newPass }) });
-    const data = await res.json();
-    if (data.success) {
-      msg.style.color='#16a34a'; msg.textContent='✅ تم تغيير كلمة المرور';
-      document.getElementById('cpUser').value = '';
-      document.getElementById('cpPass').value = '';
-    } else { msg.style.color='#dc2626'; msg.textContent = data.error||'خطأ'; }
-  } catch(e) { msg.style.color='#dc2626'; msg.textContent='تعذر الاتصال'; }
-}
-
+// إغلاق البحث عند الضغط خارجه
 document.addEventListener('click',e=>{
-  if(!e.target.closest('#panel-geo'))document.getElementById('geoResults').style.display='none';
+  if(!e.target.closest('#pGeo'))document.getElementById('geoRes').style.display='none';
 });
 </script>
 </body>
