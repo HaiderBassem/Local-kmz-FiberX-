@@ -591,7 +591,58 @@ async function doGeoSearch() {
   if (!q) { box.style.display='none'; st.textContent=''; return; }
   box.innerHTML='';
 
-  // ===== إحداثيات مباشرة =====
+  // ===== إحداثيات - كل الصيغ =====
+  function parseDMS(str) {
+    // صيغة DMS: 32°30'15"N 45°48'30"E أو N32°30'15" E45°48'30"
+    // أو: 32 30 15 N 45 48 30 E
+    const dms = str.trim();
+    
+    // نمط: N 47°46'51.6"E"29.1'30°32 أو أي تنسيق DMS
+    const dmsPattern = /([NS]?\s*\d+[°º]\s*\d+['′]\s*[\d.]+["″]?\s*[NS]?)\s*[,\s]+\s*([EW]?\s*\d+[°º]\s*\d+['′]\s*[\d.]+["″]?\s*[EW]?)/i;
+    const m = dms.match(dmsPattern);
+    if (m) {
+      function dmsToDD(part) {
+        const nums = part.match(/[\d.]+/g);
+        if (!nums || nums.length < 3) return null;
+        const d = parseFloat(nums[0]);
+        const min = parseFloat(nums[1]);
+        const sec = parseFloat(nums[2]);
+        const dd = d + min/60 + sec/3600;
+        const neg = /[SW]/i.test(part);
+        return neg ? -dd : dd;
+      }
+      const lat = dmsToDD(m[1]);
+      const lon = dmsToDD(m[2]);
+      if (lat !== null && lon !== null) return { lat, lon };
+    }
+    
+    // نمط بسيط: 32°30'N 45°48'E
+    const simple = str.match(/(\d+)[°º](\d+)['′]?([NS]?)\s*[,\s]+\s*(\d+)[°º](\d+)['′]?([EW]?)/i);
+    if (simple) {
+      let lat = parseInt(simple[1]) + parseInt(simple[2])/60;
+      let lon = parseInt(simple[4]) + parseInt(simple[5])/60;
+      if (/S/i.test(simple[3])) lat = -lat;
+      if (/W/i.test(simple[6])) lon = -lon;
+      return { lat, lon };
+    }
+    
+    return null;
+  }
+
+  // تجربة DMS أولاً
+  const dmsResult = parseDMS(q);
+  if (dmsResult) {
+    const { lat, lon } = dmsResult;
+    if (lat>=-90&&lat<=90&&lon>=-180&&lon<=180) {
+      map.setView([lat,lon],17);
+      if(lastMarker) map.removeLayer(lastMarker);
+      lastMarker = L.marker([lat,lon]).addTo(map)
+        .bindPopup(`<b>📍 ${lat.toFixed(6)}, ${lon.toFixed(6)}</b>`).openPopup();
+      box.style.display='none'; st.textContent=''; return;
+    }
+  }
+
+  // إحداثيات عشرية عادية: 32.123, 45.456
   const cm = q.match(/(-?\d+[.,]\d*)\s*[,،\s]+\s*(-?\d+[.,]\d*)/);
   if (cm) {
     const lat=parseFloat(cm[1].replace(',','.')), lon=parseFloat(cm[2].replace(',','.'));
