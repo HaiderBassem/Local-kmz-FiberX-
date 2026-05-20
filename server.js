@@ -7,6 +7,7 @@ const { DOMParser } = require('xmldom');
 const toGeoJSON = require('@mapbox/togeojson');
 
 const app  = express();
+const HOST = '192.168.16.138';
 const PORT = 9999;
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -270,4 +271,4 @@ app.get('/api/places', (req, res) => {
   fs.existsSync(p) ? res.sendFile(p) : res.json([]);
 });
 
-app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));
+app.listen(PORT, HOST, () => console.log(`✅ http://${HOST}:${PORT}`));
