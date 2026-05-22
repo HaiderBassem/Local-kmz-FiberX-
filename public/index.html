@@ -328,8 +328,18 @@ async function changePass(){
 // ===== رسم الطبقات =====
 function isFAT(f){
   const p=f.properties||{};
+  // 1. المثلث الكبير = FAT (من server.js)
+  if(p._isTriangle) return true;
+  // 2. اسم الفولدر fat
   const folder=(p._folder||'').toLowerCase();
-  return /^fat[s]?$/i.test(folder.trim())||!!(p.FAT_LABEL||p['FAT #']||p.Stracture);
+  if(/^fat[s]?$/i.test(folder.trim())) return true;
+  // 3. خصائص FAT
+  if(p.FAT_LABEL||p['FAT #']||p.Stracture) return true;
+  return false;
+}
+
+function isTriangle(f){
+  return !!(f.properties && f.properties._isTriangle);
 }
 function propsHtml(f){
   const p=f.properties||{};
@@ -361,7 +371,20 @@ function showGeoJSON(data){
     const refs=[];
     arr.forEach(f=>{
       const ll=[f.geometry.coordinates[1],f.geometry.coordinates[0]];
-      const m=fat?L.circleMarker(ll,{radius:6,fillColor:col,color:'#fff',weight:1,fillOpacity:.95}):L.marker(ll);
+      const m=(fat||isTriangle(f))
+        ? (isTriangle(f)
+            // رسم مثلث SVG
+            ? L.marker(ll, {icon: L.divIcon({
+                html: `<svg width="20" height="18" viewBox="0 0 20 18" style="filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))">
+                  <polygon points="10,1 19,17 1,17" fill="${col}" stroke="white" stroke-width="1.5"/>
+                </svg>`,
+                className:'',
+                iconSize:[20,18],
+                iconAnchor:[10,17]
+              })})
+            : L.circleMarker(ll,{radius:6,fillColor:col,color:'#fff',weight:1,fillOpacity:.95})
+          )
+        : L.marker(ll);
       m.bindPopup(propsHtml(f));cl.addLayer(m);refs.push(m);
     });
     cl.addTo(map);

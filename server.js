@@ -7,8 +7,7 @@ const { DOMParser } = require('xmldom');
 const toGeoJSON = require('@mapbox/togeojson');
 
 const app  = express();
-const HOST = '192.168.16.138';
-const PORT = 9999;
+const PORT = 3000;
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const DATA_DIR   = path.join(__dirname, 'data');
@@ -104,13 +103,59 @@ function parseKml(kmlContent) {
   const geo = toGeoJSON.kml(dom);
   if (!geo || !geo.features) throw new Error('Conversion failed');
   try {
+    // بناء خريطة الـ styles لكشف المثلثات
+    const styleMap = {};
+    const allStyles = dom.getElementsByTagName('Style');
+    for (let i = 0; i < allStyles.length; i++) {
+      const s = allStyles[i];
+      const sid = s.getAttribute('id') || '';
+      if (!sid) continue;
+      const iconEls = s.getElementsByTagName('href');
+      const scaleEls = s.getElementsByTagName('scale');
+      const icon = iconEls[0] ? (iconEls[0].textContent || '') : '';
+      const scale = scaleEls[0] ? parseFloat(scaleEls[0].textContent || '1') : 1;
+      styleMap[sid] = { icon, scale, isTriangle: icon.toLowerCase().includes('triangl') };
+    }
+    // StyleMap يحيل لـ Style
+    const allStyleMaps = dom.getElementsByTagName('StyleMap');
+    for (let i = 0; i < allStyleMaps.length; i++) {
+      const sm = allStyleMaps[i];
+      const smid = sm.getAttribute('id') || '';
+      if (!smid) continue;
+      const pairs = sm.getElementsByTagName('Pair');
+      for (let j = 0; j < pairs.length; j++) {
+        const key = pairs[j].getElementsByTagName('key')[0];
+        const su = pairs[j].getElementsByTagName('styleUrl')[0];
+        if (key && key.textContent === 'normal' && su) {
+          const ref = (su.textContent || '').replace(/^#/, '');
+          if (styleMap[ref]) styleMap[smid] = styleMap[ref];
+        }
+      }
+    }
+
     const pms = dom.getElementsByTagNameNS('*','Placemark');
     geo.features.forEach((f,i) => {
+      const pm = pms[i];
+      f.properties = f.properties || {};
+      
+      if (pm) {
+        // استخراج styleUrl وكشف المثلث
+        const styleUrlEl = pm.getElementsByTagName('styleUrl')[0];
+        if (styleUrlEl) {
+          const su = (styleUrlEl.textContent || '').replace(/^#/, '');
+          f.properties.styleUrl = su;
+          // كشف مثلث من styleMap
+          if (styleMap[su] && styleMap[su].isTriangle) {
+            f.properties._isTriangle = true;
+          }
+        }
+      }
+      
       let node = pms[i] && pms[i].parentNode;
       while (node) {
         if (node.localName==='Folder' || node.nodeName==='Folder') {
           const n = (node.getElementsByTagNameNS ? node.getElementsByTagNameNS('*','name') : node.getElementsByTagName('name'))[0];
-          if (n) { f.properties=f.properties||{}; f.properties._folder=n.textContent||''; }
+          if (n) { f.properties._folder=n.textContent||''; }
           break;
         }
         node = node.parentNode;
@@ -271,4 +316,4 @@ app.get('/api/places', (req, res) => {
   fs.existsSync(p) ? res.sendFile(p) : res.json([]);
 });
 
-app.listen(PORT, HOST, () => console.log(`✅ http://${HOST}:${PORT}`));
+app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));
