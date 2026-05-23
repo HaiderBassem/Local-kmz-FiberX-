@@ -7,7 +7,7 @@ const { DOMParser } = require('xmldom');
 const toGeoJSON = require('@mapbox/togeojson');
 
 const app  = express();
-const PORT = 3000;
+const PORT = 9999;
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 const DATA_DIR   = path.join(__dirname, 'data');
@@ -32,6 +32,22 @@ function authAdmin(username, password) {
 
 app.use(express.static('public'));
 app.use(express.json());
+
+// ===== Auto-Login من ShiftMaster =====
+app.get('/autologin', (req, res) => {
+    const { u, p } = req.query;
+    if (!u || !p) return res.redirect('/');
+    const users = loadUsers();
+    const user = users.find(usr => usr.username === u && usr.password === p);
+    if (!user) return res.redirect('/');
+    // ولّد token موقّت (20 ثانية فقط)
+    const token = Buffer.from(JSON.stringify({
+      un: u, r: user.role, e: Date.now() + 20000
+    })).toString('base64');
+    res.redirect('/?_t=' + encodeURIComponent(token));
+  });
+  
+
 
 // ===== تسجيل الدخول =====
 app.post('/api/login', (req, res) => {
@@ -137,7 +153,7 @@ function parseKml(kmlContent) {
     geo.features.forEach((f,i) => {
       const pm = pms[i];
       f.properties = f.properties || {};
-      
+
       if (pm) {
         // استخراج styleUrl وكشف المثلث
         const styleUrlEl = pm.getElementsByTagName('styleUrl')[0];
@@ -150,7 +166,7 @@ function parseKml(kmlContent) {
           }
         }
       }
-      
+
       let node = pms[i] && pms[i].parentNode;
       while (node) {
         if (node.localName==='Folder' || node.nodeName==='Folder') {
@@ -188,22 +204,22 @@ app.post('/api/upload', upload.any(), (req, res) => {
   try {
     console.log('Upload request received');
     console.log('Files:', req.files ? req.files.length : 'none');
-    
+
     const f = (req.files||[])[0];
     if (!f) {
       console.log('No file in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    
+
     console.log('File:', f.originalname, 'size:', f.size);
     const ext = path.extname(f.originalname).toLowerCase();
     if (ext !== '.kmz') return res.status(400).json({ error: 'يجب أن يكون الملف بصيغة KMZ' });
-    
+
     const kmlContent = getKmlFromKmz(f.path);
     const geo = parseKml(kmlContent);
-    
+
     if (!geo || !geo.features) throw new Error('فشل تحويل الملف');
-    
+
     const savedFile = `${Date.now()}.json`;
     const meta = {
       id: savedFile,
@@ -212,11 +228,11 @@ app.post('/api/upload', upload.any(), (req, res) => {
       createdAt: new Date().toISOString(),
       featureCount: geo.features.length
     };
-    
+
     fs.writeFileSync(path.join(DATA_DIR, savedFile), JSON.stringify({ meta, geojson: geo }));
     console.log('Saved:', savedFile, 'features:', geo.features.length);
     res.json({ success: true, file: savedFile, meta });
-    
+
   } catch(e) {
     console.error('Upload error:', e.message);
     res.status(500).json({ error: e.message || 'فشل رفع الملف' });
@@ -241,9 +257,9 @@ const https = require('https');
 app.get('/api/geocode', (req, res) => {
   const address = req.query.q || '';
   if (!address) return res.json({ results: [] });
-  
+
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&language=ar&key=${GOOGLE_API_KEY}`;
-  
+
   https.get(url, (apiRes) => {
     let data = '';
     apiRes.on('data', chunk => data += chunk);
@@ -258,23 +274,23 @@ app.get('/api/google-places', (req, res) => {
   const query = req.query.q || '';
   const lat   = req.query.lat || '31.0';
   const lon   = req.query.lon || '47.0';
-  
+
   if (!query) return res.json({ results: [] });
-  
+
   // نبحث بـ Text Search مع تقييد المنطقة (البصرة + واسط)
   // نضيف "العراق" للبحث إذا مو موجودة
   const searchQuery = query;
-  
+
   // البحث الأول: Text Search مع location bias
   const url1 = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${lat},${lon}&radius=200000&language=ar&key=${GOOGLE_API_KEY}`;
-  
+
   https.get(url1, (apiRes) => {
     let data = '';
     apiRes.on('data', chunk => data += chunk);
     apiRes.on('end', () => {
       try {
         const result = JSON.parse(data);
-        
+
         // فلتر: نقبل فقط نتائج داخل العراق
         const iraqBounds = { minLat: 29.0, maxLat: 37.5, minLon: 38.0, maxLon: 49.0 };
         const filtered = (result.results || []).filter(place => {
@@ -283,7 +299,7 @@ app.get('/api/google-places', (req, res) => {
           return loc.lat >= iraqBounds.minLat && loc.lat <= iraqBounds.maxLat &&
                  loc.lng >= iraqBounds.minLon && loc.lng <= iraqBounds.maxLon;
         });
-        
+
         // إذا ما في نتائج في العراق، نبحث مرة ثانية مع "العراق"
         if (filtered.length === 0 && !searchQuery.includes('العراق') && !searchQuery.includes('Iraq')) {
           const url2 = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery + ' العراق')}&language=ar&key=${GOOGLE_API_KEY}`;
@@ -315,5 +331,19 @@ app.get('/api/places', (req, res) => {
   const p = path.join(__dirname,'public','places.json');
   fs.existsSync(p) ? res.sendFile(p) : res.json([]);
 });
+
+// Auto-Login من ShiftMaster
+app.get('/autologin', (req, res) => {
+    const { u, p } = req.query;
+    if (!u || !p) return res.redirect('/');
+    const users = loadUsers();
+    const user = users.find(usr => usr.username === u && usr.password === p);
+    if (!user) return res.redirect('/');
+    const token = Buffer.from(JSON.stringify({
+      un: u, pw: p, r: user.role, e: Date.now() + 20000
+    })).toString('base64');
+    res.redirect('/?_t=' + encodeURIComponent(token));
+  });
+  
 
 app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));

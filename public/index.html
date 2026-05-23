@@ -789,6 +789,29 @@ function switchTab(tab){
 document.addEventListener('click',e=>{
   if(!e.target.closest('#pGeo'))document.getElementById('geoRes').style.display='none';
 });
+
+// ===== Auto-Login من ShiftMaster =====
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get('_t');
+  if(!t) return;
+  window.history.replaceState({}, '', window.location.pathname);
+  try {
+    const data = JSON.parse(atob(t));
+    if(!data.un || !data.r || Date.now() > data.e) return;
+    _creds = { username: data.un, password: data.pw || '' };
+    document.getElementById('lo').style.display = 'none';
+    if(data.r === 'admin'){
+      isAdmin = true;
+      document.getElementById('uploadCard').style.display = 'block';
+    } else {
+      document.getElementById('userBar').style.display = 'block';
+      document.getElementById('uname').textContent = '👤 ' + data.un;
+    }
+    loadFiles();
+  } catch(e){ console.error('Auto-login error:', e); }
+})();
+
 </script>
 </body>
 </html>
