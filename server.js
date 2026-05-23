@@ -33,21 +33,6 @@ function authAdmin(username, password) {
 app.use(express.static('public'));
 app.use(express.json());
 
-// ===== Auto-Login من ShiftMaster =====
-app.get('/autologin', (req, res) => {
-    const { u, p } = req.query;
-    if (!u || !p) return res.redirect('/');
-    const users = loadUsers();
-    const user = users.find(usr => usr.username === u && usr.password === p);
-    if (!user) return res.redirect('/');
-    // ولّد token موقّت (20 ثانية فقط)
-    const token = Buffer.from(JSON.stringify({
-      un: u, r: user.role, e: Date.now() + 20000
-    })).toString('base64');
-    res.redirect('/?_t=' + encodeURIComponent(token));
-  });
-  
-
 
 // ===== تسجيل الدخول =====
 app.post('/api/login', (req, res) => {
@@ -332,18 +317,17 @@ app.get('/api/places', (req, res) => {
   fs.existsSync(p) ? res.sendFile(p) : res.json([]);
 });
 
-// Auto-Login من ShiftMaster
+// ===== Auto-Login من ShiftMaster =====
 app.get('/autologin', (req, res) => {
-    const { u, p } = req.query;
-    if (!u || !p) return res.redirect('/');
-    const users = loadUsers();
-    const user = users.find(usr => usr.username === u && usr.password === p);
-    if (!user) return res.redirect('/');
-    const token = Buffer.from(JSON.stringify({
-      un: u, pw: p, r: user.role, e: Date.now() + 20000
-    })).toString('base64');
-    res.redirect('/?_t=' + encodeURIComponent(token));
-  });
-  
+  const { u, p } = req.query;
+  if (!u || !p) return res.redirect('/');
+  const users = loadUsers();
+  const user = users.find(usr => usr.username === u && usr.password === p);
+  if (!user) return res.redirect('/');
+  const token = Buffer.from(JSON.stringify({
+    un: u, pw: p, r: user.role, e: Date.now() + 20000
+  })).toString('base64');
+  res.redirect('/?_t=' + encodeURIComponent(token));
+});
 
 app.listen(PORT, () => console.log(`✅ http://localhost:${PORT}`));
